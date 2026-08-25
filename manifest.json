@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "职舟 AI 求职智能体",
+  "version": "0.1.0",
+  "description": "在招聘网站侧边栏中筛选岗位、AI 匹配简历并在确认后批量辅助投递。",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.zhipin.com/*",
+    "https://*.liepin.com/*",
+    "https://*.zhaopin.com/*",
+    "https://api.deepseek.com/*",
+    "https://api.openai.com/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_title": "打开职舟 AI 求职智能体"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.zhipin.com/*",
+        "https://*.liepin.com/*",
+        "https://*.zhaopin.com/*"
+      ],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>职舟 AI 求职智能体</title>
+    <link rel="stylesheet" href="sidepanel.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand-mark" aria-hidden="true">舟</div>
+      <div>
+        <h1>职舟 AI 求职智能体</h1>
+        <p>筛选 · 匹配 · 确认投递</p>
+      </div>
+      <button id="settingsButton" class="icon-button" type="button" title="求职配置" aria-label="打开求职配置">⚙</button>
+    </header>
+
+    <main>
+      <section id="siteBanner" class="site-banner" aria-live="polite">
+        <span class="status-dot"></span>
+        <div>
+          <strong id="siteName">正在识别当前页面…</strong>
+          <span id="siteHint">请先打开招聘网站的岗位列表页</span>
+        </div>
+      </section>
+
+      <nav class="steps" aria-label="工作进度">
+        <button class="step is-active" data-view="scan" type="button"><span>1</span>找岗位</button>
+        <button class="step" data-view="review" type="button"><span>2</span>AI 匹配</button>
+        <button class="step" data-view="logs" type="button"><span>3</span>确认投递</button>
+      </nav>
+
+      <section id="scanView" class="view is-active">
+        <div class="hero-card">
+          <div>
+            <span class="eyebrow">当前任务</span>
+            <h2>从当前页面收集岗位</h2>
+            <p>读取当前列表页，先用岗位、地区、薪资和黑名单做本地筛选。</p>
+          </div>
+          <button id="scanButton" class="primary-button" type="button">扫描当前页</button>
+        </div>
+
+        <div class="metrics" aria-label="扫描统计">
+          <article><strong id="metricTotal">0</strong><span>已发现</span></article>
+          <article><strong id="metricPassed">0</strong><span>通过初筛</span></article>
+          <article><strong id="metricMatched">0</strong><span>AI 匹配</span></article>
+        </div>
+
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">岗位池</span>
+            <h2>初筛结果</h2>
+          </div>
+          <button id="analyzeButton" class="secondary-button" type="button" disabled>开始 AI 匹配</button>
+        </div>
+        <div id="scanEmpty" class="empty-state">
+          <div class="empty-icon">⌁</div>
+          <strong>还没有扫描结果</strong>
+          <p>打开 BOSS 直聘、猎聘或智联招聘的职位列表，然后点击“扫描当前页”。</p>
+        </div>
+        <div id="scanList" class="job-list" hidden></div>
+      </section>
+
+      <section id="reviewView" class="view">
+        <div class="section-heading review-heading">
+          <div>
+            <span class="eyebrow">审核确认</span>
+            <h2>匹配岗位</h2>
+          </div>
+          <div class="compact-actions">
+            <button id="selectMatchedButton" class="text-button" type="button">全选匹配</button>
+            <button id="clearSelectionButton" class="text-button" type="button">清空</button>
+          </div>
+        </div>
+        <div id="reviewEmpty" class="empty-state">
+          <div class="empty-icon">✦</div>
+          <strong>等待 AI 匹配</strong>
+          <p>完成扫描后运行匹配分析，这里会展示分数、优势、缺口与招呼语。</p>
+        </div>
+        <div id="reviewList" class="job-list" hidden></div>
+        <div id="applyDock" class="apply-dock" hidden>
+          <div>
+            <strong><span id="selectedCount">0</span> 个岗位已选择</strong>
+            <span>最多 20 个，遇到验证码会自动停止</span>
+          </div>
+          <button id="applyButton" class="primary-button danger-aware" type="button">确认并投递</button>
+        </div>
+      </section>
+
+      <section id="logsView" class="view">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">运行记录</span>
+            <h2>投递日志</h2>
+          </div>
+          <button id="clearLogsButton" class="text-button" type="button">清空日志</button>
+        </div>
+        <div id="batchStatus" class="batch-status" hidden>
+          <div class="spinner"></div>
+          <div><strong id="batchStatusTitle">正在处理</strong><span id="batchStatusDetail"></span></div>
+        </div>
+        <div id="logsEmpty" class="empty-state small">
+          <div class="empty-icon">≡</div>
+          <strong>暂无运行记录</strong>
+          <p>扫描、AI 匹配和投递结果都会留在这里。</p>
+        </div>
+        <ol id="logList" class="log-list" hidden></ol>
+      </section>
+    </main>
+
+    <dialog id="settingsDialog" class="settings-dialog">
+      <form id="settingsForm" method="dialog">
+        <header>
+          <div>
+            <span class="eyebrow">仅保存在本机</span>
+            <h2>求职智能体配置</h2>
+          </div>
+          <button id="closeSettingsButton" class="icon-button" value="cancel" type="button" aria-label="关闭">×</button>
+        </header>
+
+        <div class="form-scroll">
+          <fieldset>
+            <legend>1. AI 模型</legend>
+            <label>服务商
+              <select id="providerInput" name="provider">
+                <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="local">本机兼容接口</option>
+              </select>
+            </label>
+            <label>接口地址
+              <input id="apiBaseUrlInput" name="apiBaseUrl" type="url" autocomplete="off">
+            </label>
+            <label>模型名称
+              <input id="modelInput" name="model" type="text" autocomplete="off">
+            </label>
+            <label>API Key
+              <div class="password-row">
+                <input id="apiKeyInput" name="apiKey" type="password" autocomplete="off" placeholder="sk-…">
+                <button id="toggleApiKeyButton" class="mini-button" type="button">显示</button>
+              </div>
+            </label>
+            <p class="field-note">密钥保存在 Edge 扩展的本地存储中，不会写入日志。</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>2. 简历与目标</legend>
+            <label>简历文本
+              <textarea id="resumeTextInput" name="resumeText" rows="9" placeholder="粘贴简历全文。建议保留技能、项目、工作经历和教育背景。"></textarea>
+            </label>
+            <div class="file-row">
+              <label class="file-button" for="resumeFileInput">导入 TXT / MD</label>
+              <input id="resumeFileInput" type="file" accept=".txt,.md,text/plain,text/markdown" hidden>
+              <span id="resumeCount">0 字</span>
+            </div>
+            <label>目标岗位关键词
+              <input id="keywordsInput" name="keywords" type="text" placeholder="AI产品经理, 产品经理">
+            </label>
+            <label>目标城市
+              <input id="citiesInput" name="cities" type="text" placeholder="上海, 杭州；留空不限">
+            </label>
+            <div class="two-columns">
+              <label>最低月薪（K）<input id="salaryMinInput" name="salaryMin" type="number" min="0" max="200"></label>
+              <label>最高月薪（K）<input id="salaryMaxInput" name="salaryMax" type="number" min="0" max="300"></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>3. 过滤与执行</legend>
+            <label>公司黑名单
+              <input id="companyBlacklistInput" name="companyBlacklist" type="text" placeholder="公司名，逗号分隔">
+            </label>
+            <label>岗位黑名单
+              <input id="jobBlacklistInput" name="jobBlacklist" type="text" placeholder="销售, 保险, 外包驻场">
+            </label>
+            <div class="two-columns">
+              <label>最低匹配分<input id="minScoreInput" name="minScore" type="number" min="0" max="100"></label>
+              <label>单批上限<input id="maxJobsInput" name="maxJobs" type="number" min="1" max="20"></label>
+            </div>
+            <label>岗位间隔（秒）
+              <input id="delaySecondsInput" name="delaySeconds" type="number" min="4" max="30">
+            </label>
+            <label>招呼语模板
+              <textarea id="greetingTemplateInput" name="greetingTemplate" rows="4"></textarea>
+            </label>
+            <p class="field-note">可用变量：{jobTitle}、{company}。自动化只在你点击“确认并投递”后运行。</p>
+          </fieldset>
+        </div>
+
+        <footer>
+          <span id="settingsMessage" role="status"></span>
+          <button id="saveSettingsButton" class="primary-button" type="submit">保存配置</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="confirmDialog" class="confirm-dialog">
+      <form method="dialog">
+        <div class="confirm-icon">!</div>
+        <h2>确认实际投递</h2>
+        <p id="confirmMessage"></p>
+        <ul>
+          <li>扩展会打开岗位页并点击“立即沟通/投递”。</li>
+          <li>部分网站会立即把简历或招呼语发给招聘方。</li>
+          <li>遇到验证码、安全验证或异常页面会自动停止。</li>
+        </ul>
+        <label class="confirm-check">
+          <input id="confirmCheck" type="checkbox">
+          我已核对岗位，并授权本批次实际投递
+        </label>
+        <footer>
+          <button id="cancelApplyButton" class="secondary-button" value="cancel" type="button">取消</button>
+          <button id="confirmApplyButton" class="primary-button" value="default" type="button" disabled>开始投递</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
