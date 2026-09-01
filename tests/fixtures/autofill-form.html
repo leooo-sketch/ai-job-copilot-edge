@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>职舟网申填充测试页</title>
+    <style>
+      :root { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #29253b; background: #f5f7fb; }
+      body { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+      h1 { margin: 0 0 8px; }
+      .intro { color: #6b6880; }
+      fieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 24px 0; padding: 24px; border: 1px solid #dfe3ef; border-radius: 16px; background: #fff; }
+      legend { padding: 0 8px; color: #5d49d8; font-weight: 800; }
+      label { display: grid; gap: 7px; color: #535066; font-size: 13px; }
+      label.wide { grid-column: 1 / -1; }
+      input, select, textarea { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #cfd4e2; border-radius: 9px; font: inherit; box-sizing: border-box; }
+      textarea { min-height: 100px; }
+      .actions { display: flex; gap: 10px; }
+      button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; color: #fff; background: #6654e8; font-weight: 700; cursor: pointer; }
+      pre { min-height: 90px; padding: 14px; border-radius: 12px; color: #ddf9ec; background: #27243b; white-space: pre-wrap; }
+      .repeat-card { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; grid-column: 1 / -1; padding: 14px; border: 1px dashed #c9c2ee; border-radius: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>模拟校园招聘网申</h1>
+    <p class="intro">用于验证真实字段扫描、保留已有值、敏感字段审核和多段教育经历映射。</p>
+
+    <form id="applicationForm">
+      <fieldset>
+        <legend>个人信息</legend>
+        <label>姓名 <input id="fullName" name="full_name" placeholder="请填写您的真实姓名" required></label>
+        <label>姓名全拼 <input id="namePinyin" name="name_pinyin" placeholder="请如实填写"></label>
+        <label>手机号码 <input id="phone" name="mobile" type="tel" value="13900000000"></label>
+        <label>电子邮箱 <input id="email" name="email" type="email" autocomplete="email"></label>
+        <label>现居住城市 <input id="currentCity" name="current_city"></label>
+        <label>性别
+          <select id="gender" name="gender">
+            <option value="">请选择</option>
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+        </label>
+        <label>证件号码 <input id="idNumber" name="id_number"></label>
+        <label>入学前户口所在地 <input id="hukou" name="hukou_location"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>教育经历</legend>
+        <label>学校名称 <input id="school1" name="school_1"></label>
+        <label>专业名称 <input id="major1" name="major_1"></label>
+        <label>入学时间 <input id="educationStart1" name="education_start_1" placeholder="请选择您的入学时间" readonly></label>
+        <label>受教育类型
+          <div id="educationType1" class="ant-select ant-select-single">
+            <div class="ant-select-selector">
+              <span class="ant-select-selection-item">全日制</span>
+              <input aria-hidden="true" style="opacity:0;width:0;height:0" readonly>
+            </div>
+          </div>
+        </label>
+        <label>学校名称 <input id="school2" name="school_2"></label>
+        <label>专业名称 <input id="major2" name="major_2"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>实习经历</legend>
+        <label>实习单位 <input id="internCompany" name="intern_company"></label>
+        <label>实习岗位 <input id="internPosition" name="intern_position"></label>
+        <label class="wide">实习内容 <textarea id="internSummary" name="intern_summary"></textarea></label>
+      </fieldset>
+
+      <fieldset id="projectSection">
+        <legend>项目经验</legend>
+        <div id="projectRecords" style="display: contents"></div>
+        <button id="addProject" type="submit">＋ 添加项目经验</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>其他信息</legend>
+        <label class="wide">自我评价 <textarea id="selfEvaluation" name="self_evaluation"></textarea></label>
+        <label class="wide">附件 <input id="resumeFile" name="resume_file" type="file"></label>
+      </fieldset>
+    </form>
+
+    <div class="actions">
+      <button id="scanTest" type="button">运行扫描</button>
+      <button id="fillTest" type="button">填写高置信度字段</button>
+    </div>
+    <pre id="testResult">尚未运行</pre>
+
+    <script>
+      window.chrome = {
+        runtime: {
+          onMessage: {
+            addListener(listener) { window.__autofillMessageListener = listener; }
+          }
+        }
+      };
+    </script>
+    <script src="../../autofill-core.js"></script>
+    <script src="../../autofill-content.js?v=2"></script>
+    <script>
+      const testProfile = JobAutofillCore.sanitizeProfile({
+        schemaVersion: 3,
+        basics: { name: "测试用户", namePinyin: "CESHI YONGHU", phone: "13800138000", email: "test@example.com", currentCity: "上海" },
+        private: { gender: "女", idNumber: "310000000000000000", hukouLocation: "江苏南京" },
+        education: [
+          { institution: "示例大学", area: "人工智能", studyType: "硕士", startDate: "2022-09", educationType: "全日制" },
+          { institution: "第二大学", area: "环境工程", studyType: "本科" }
+        ],
+        work: [
+          { experienceType: "工作", name: "真实工作单位", position: "AI 产品经理", responsibilities: "负责 AI 产品规划与交付" }
+        ],
+        projects: [
+          { name: "职舟 AI 求职智能体", role: "产品负责人", startDate: "2025-01", endDate: "2026-08", responsibilities: "设计可靠的网申字段映射", achievements: "支持重复经历卡片" },
+          { name: "独立站自动运营", role: "项目负责人", startDate: "2024-01", endDate: "2024-09", responsibilities: "自动选品与上品", achievements: "完成业务闭环" }
+        ],
+        narratives: { selfEvaluation: "善于把复杂技术转化为清晰、可落地的产品方案。" }
+      });
+      let latestPlan = [];
+
+      document.getElementById("addProject").addEventListener("click", () => {
+        const index = document.querySelectorAll("[data-project-card]").length;
+        const card = document.createElement("div");
+        card.className = "repeat-card";
+        card.dataset.projectCard = String(index);
+        const fields = [
+          ["项目名称", `projectName${index}`], ["项目角色", `projectRole${index}`],
+          ["项目开始时间", `projectStart${index}`], ["项目结束时间", `projectEnd${index}`],
+          ["项目职责", `projectResponsibilities${index}`, "textarea"], ["项目成果", `projectAchievements${index}`, "textarea"]
+        ];
+        fields.forEach(([text, id, tag = "input"]) => {
+          const label = document.createElement("label");
+          label.textContent = text;
+          const control = document.createElement(tag);
+          control.id = id;
+          control.name = id;
+          label.append(control);
+          card.append(label);
+        });
+        document.getElementById("projectRecords").append(card);
+      });
+
+      function sendAgentMessage(message) {
+        return new Promise((resolve) => window.__autofillMessageListener(message, {}, resolve));
+      }
+
+      async function scanHarness() {
+        await sendAgentMessage({
+          type: "AUTOFILL_PREPARE_REPEAT_SECTIONS",
+          desiredCounts: { education: testProfile.education.length, work: testProfile.work.length, internships: testProfile.work.length, projects: testProfile.projects.length }
+        });
+        const response = await sendAgentMessage({ type: "AUTOFILL_SCAN_FORM" });
+        latestPlan = JobAutofillCore.buildFillPlan(testProfile, response.fields);
+        const summary = Object.fromEntries(latestPlan.map((item) => [item.fieldId, { label: item.label, key: item.canonicalKey, status: item.status, selected: item.selected }]));
+        document.getElementById("testResult").textContent = JSON.stringify(summary, null, 2);
+        return { response, plan: latestPlan };
+      }
+
+      async function fillHarness() {
+        if (!latestPlan.length) await scanHarness();
+        const entries = latestPlan.filter((item) => item.selected).map((item) => ({ fieldId: item.fieldId, value: item.value }));
+        const response = await sendAgentMessage({ type: "AUTOFILL_APPLY_PLAN", entries });
+        document.getElementById("testResult").textContent = JSON.stringify({
+          ...response.result,
+          checks: {
+            phonePreserved: document.getElementById("phone").value === "13900000000",
+            emailFilled: document.getElementById("email").value === "test@example.com",
+            sensitiveSkipped: document.getElementById("idNumber").value === "",
+            internshipSkipped: ["internCompany", "internPosition", "internSummary"].every((id) => document.getElementById(id).value === ""),
+            projectCardsCreated: document.querySelectorAll("[data-project-card]").length === 2,
+            projectNamesFilled: document.getElementById("projectName0")?.value === "职舟 AI 求职智能体" && document.getElementById("projectName1")?.value === "独立站自动运营",
+            readonlyDateFilled: document.getElementById("educationStart1").value === "2022-09",
+            customSelectPreserved: document.querySelector("#educationType1 .ant-select-selection-item")?.textContent === "全日制"
+          }
+        }, null, 2);
+        return response;
+      }
+
+      document.getElementById("scanTest").addEventListener("click", scanHarness);
+      document.getElementById("fillTest").addEventListener("click", fillHarness);
+      window.testAutofill = { scan: scanHarness, fill: fillHarness, getPlan: () => latestPlan };
+    </script>
+  </body>
+</html>

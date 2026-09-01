@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>职舟资料库编辑器测试页</title>
+    <link rel="stylesheet" href="../../sidepanel.css">
+  </head>
+  <body>
+    <script>
+      window.chrome = {
+        storage: { local: { async get() { return {}; }, async set() {} } },
+        tabs: {
+          async query() { return [{ id: 1, url: "http://127.0.0.1:4173/tests/fixtures/profile-editor.html", title: "本地测试" }]; },
+          onActivated: { addListener() {} },
+          onUpdated: { addListener() {} }
+        },
+        runtime: { onMessage: { addListener() {} } },
+        permissions: { async contains() { return false; } }
+      };
+
+      const request = new XMLHttpRequest();
+      request.open("GET", "../../sidepanel.html", false);
+      request.send();
+      const source = new DOMParser().parseFromString(request.responseText, "text/html");
+      source.querySelectorAll("script").forEach((script) => script.remove());
+      document.body.replaceChildren(...source.body.children);
+
+      const scripts = ["../../autofill-core.js", "../../vendor/mammoth.browser.min.js", "../../resume-file-parser.js", "../../sidepanel.js"];
+      for (const src of scripts) {
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = false;
+        if (src === scripts[scripts.length - 1]) script.addEventListener("load", () => document.dispatchEvent(new Event("DOMContentLoaded")));
+        document.body.append(script);
+      }
+    </script>
+  </body>
+</html>

@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "职舟 AI 求职智能体",
-  "version": "0.1.0",
-  "description": "在招聘网站侧边栏中筛选岗位、AI 匹配简历并在确认后批量辅助投递。",
+  "version": "0.4.1",
+  "description": "拆分多段简历经历，识别自定义下拉和日期控件，并按网页现有学校/公司/项目精确对齐后可靠填充。",
   "permissions": [
     "sidePanel",
     "storage",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://*.zhipin.com/*",
@@ -14,8 +15,15 @@
     "https://*.zhaopin.com/*",
     "https://api.deepseek.com/*",
     "https://api.openai.com/*",
+    "https://dashscope.aliyuncs.com/*",
+    "https://dashscope-intl.aliyuncs.com/*",
+    "https://*.maas.aliyuncs.com/*",
     "http://127.0.0.1/*",
     "http://localhost/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
   ],
   "background": {
     "service_worker": "service-worker.js"

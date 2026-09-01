@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>简历本地解析测试页</title>
+  </head>
+  <body>
+    <h1>简历本地解析测试</h1>
+    <label for="resumeFiles">选择 PDF / DOCX / TXT / MD（可多选）</label>
+    <input id="resumeFiles" type="file" accept=".pdf,.docx,.txt,.md" multiple>
+    <pre id="result">等待文件</pre>
+    <script src="../../vendor/mammoth.browser.min.js"></script>
+    <script src="../../resume-file-parser.js?v=5"></script>
+    <script>
+      document.getElementById("resumeFiles").addEventListener("change", async (event) => {
+        const result = document.getElementById("result");
+        result.textContent = "正在本地解析…";
+        try {
+          const parsed = await JobResumeParser.extractResumeFiles(event.target.files);
+          result.textContent = JSON.stringify({
+            reports: parsed.reports.map((item) => ({ fileName: item.fileName, ok: item.ok, chars: item.chars })),
+            combinedChars: parsed.text.length,
+            warnings: parsed.warnings,
+            containsText: parsed.text.length > 100
+          }, null, 2);
+        } catch (error) {
+          result.textContent = JSON.stringify({ error: String(error.message || error) });
+        }
+      });
+    </script>
+  </body>
+</html>

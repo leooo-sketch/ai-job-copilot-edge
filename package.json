@@ -1,13 +1,17 @@
 {
   "name": "ai-job-copilot-edge",
-  "version": "0.1.0",
+  "version": "0.4.1",
   "private": true,
   "description": "Edge Manifest V3 AI job application copilot",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check service-worker.js && node --check content-script.js && node --check sidepanel.js && node --test tests/*.test.js"
+    "check": "node --check service-worker.js && node --check content-script.js && node --check autofill-core.js && node --check autofill-content.js && node --check resume-file-parser.js && node --check sidepanel.js && node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "mammoth": "1.12.2",
+    "pdfjs-dist": "4.8.69"
   }
 }

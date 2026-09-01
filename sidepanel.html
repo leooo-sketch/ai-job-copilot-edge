@@ -11,12 +11,17 @@
       <div class="brand-mark" aria-hidden="true">舟</div>
       <div>
         <h1>职舟 AI 求职智能体</h1>
-        <p>筛选 · 匹配 · 确认投递</p>
+        <p>岗位匹配 · 网申可靠填充</p>
       </div>
       <button id="settingsButton" class="icon-button" type="button" title="求职配置" aria-label="打开求职配置">⚙</button>
     </header>
 
     <main>
+      <nav class="mode-tabs" aria-label="功能模式">
+        <button class="mode-tab is-active" data-mode="jobs" type="button">岗位助手</button>
+        <button class="mode-tab" data-mode="autofill" type="button">网申填充</button>
+      </nav>
+
       <section id="siteBanner" class="site-banner" aria-live="polite">
         <span class="status-dot"></span>
         <div>
@@ -25,7 +30,7 @@
         </div>
       </section>
 
-      <nav class="steps" aria-label="工作进度">
+      <nav id="jobSteps" class="steps" aria-label="工作进度">
         <button class="step is-active" data-view="scan" type="button"><span>1</span>找岗位</button>
         <button class="step" data-view="review" type="button"><span>2</span>AI 匹配</button>
         <button class="step" data-view="logs" type="button"><span>3</span>确认投递</button>
@@ -107,6 +112,64 @@
         </div>
         <ol id="logList" class="log-list" hidden></ol>
       </section>
+
+      <section id="autofillView" class="view">
+        <div class="hero-card autofill-hero">
+          <div>
+            <span class="eyebrow">可靠网申</span>
+            <h2>先扫描预览，再填写</h2>
+            <p>只自动勾选高置信度字段，不覆盖网页已有内容；证件、出生日期等敏感信息必须由你逐项确认。</p>
+          </div>
+          <div class="hero-actions">
+            <button id="editProfileButton" class="hero-secondary-button" type="button">维护资料库</button>
+            <button id="scanFormButton" class="primary-button" type="button">扫描当前表单</button>
+          </div>
+        </div>
+
+        <section class="profile-status-card" aria-live="polite">
+          <div>
+            <span class="eyebrow">本地资料库</span>
+            <strong id="profileStatusTitle">尚未配置</strong>
+            <p id="profileStatusHint">姓名、联系方式、教育和项目等信息只保存在本机。</p>
+          </div>
+          <div id="profileProgress" class="profile-progress" aria-label="资料完整度">0%</div>
+        </section>
+
+        <div class="metrics autofill-metrics" aria-label="表单识别统计">
+          <article><strong id="formFieldTotal">0</strong><span>可见字段</span></article>
+          <article><strong id="formReadyTotal">0</strong><span>可直接填</span></article>
+          <article><strong id="formReviewTotal">0</strong><span>待你确认</span></article>
+        </div>
+
+        <div class="safety-note">
+          <strong>默认保护</strong>
+          <span>不猜测缺失资料、不覆盖已有值、不选附件、不点击“提交/投递”。</span>
+        </div>
+
+        <div class="section-heading autofill-heading">
+          <div>
+            <span class="eyebrow">字段级审核</span>
+            <h2>填充预览</h2>
+          </div>
+          <div class="compact-actions">
+            <button id="selectReadyFieldsButton" class="text-button" type="button">只选高置信度</button>
+            <button id="clearFieldSelectionButton" class="text-button" type="button">清空</button>
+          </div>
+        </div>
+        <div id="autofillEmpty" class="empty-state">
+          <div class="empty-icon">▦</div>
+          <strong>等待扫描网申表单</strong>
+          <p>打开企业网申页面，点击“扫描当前表单”。首次使用只会申请当前网站的临时访问权限。</p>
+        </div>
+        <div id="autofillPlanList" class="autofill-plan-list" hidden></div>
+        <div id="autofillDock" class="apply-dock autofill-dock" hidden>
+          <div>
+            <strong><span id="selectedFieldCount">0</span> 个字段已选择</strong>
+            <span>填完后仍需你逐项核对并手动提交</span>
+          </div>
+          <button id="fillSelectedFieldsButton" class="primary-button" type="button">填写所选字段</button>
+        </div>
+      </section>
     </main>
 
     <dialog id="settingsDialog" class="settings-dialog">
@@ -124,6 +187,7 @@
             <legend>1. AI 模型</legend>
             <label>服务商
               <select id="providerInput" name="provider">
+                <option value="qwen">千问（阿里云百炼）</option>
                 <option value="deepseek">DeepSeek</option>
                 <option value="openai">OpenAI</option>
                 <option value="local">本机兼容接口</option>
@@ -141,7 +205,13 @@
                 <button id="toggleApiKeyButton" class="mini-button" type="button">显示</button>
               </div>
             </label>
-            <p class="field-note">密钥保存在 Edge 扩展的本地存储中，不会写入日志。</p>
+            <div class="file-row">
+              <label class="file-button" for="qwenKeyFileInput">导入千问 Key 文件</label>
+              <input id="qwenKeyFileInput" type="file" accept=".txt,text/plain" hidden>
+              <span id="qwenKeyStatus">不会显示或写入日志</span>
+            </div>
+            <label class="inline-check"><input id="enableThinkingInput" type="checkbox"> 启用千问深度思考（只展示简短映射理由）</label>
+            <p class="field-note">密钥仅保存在 Edge 扩展的本地存储中。深度思考内容不会保存或展示。</p>
           </fieldset>
 
           <fieldset>
@@ -195,6 +265,218 @@
       </form>
     </dialog>
 
+    <dialog id="profileDialog" class="settings-dialog profile-dialog">
+      <form id="profileForm" method="dialog">
+        <header>
+          <div>
+            <span class="eyebrow">仅保存在扩展本机存储</span>
+            <h2>网申结构化资料库</h2>
+          </div>
+          <button id="closeProfileButton" class="icon-button" type="button" aria-label="关闭">×</button>
+        </header>
+
+        <div class="form-scroll">
+          <div class="profile-toolbar">
+            <label class="secondary-button profile-upload-button" for="profileResumeFileInput">上传简历并用千问生成资料库</label>
+            <input id="profileResumeFileInput" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple hidden>
+            <button id="extractProfileButton" class="text-button" type="button">仅从粘贴文本提取联系方式</button>
+            <button id="exportProfileButton" class="text-button" type="button">导出 JSON</button>
+            <label class="text-button import-profile-button" for="profileFileInput">导入 JSON</label>
+            <input id="profileFileInput" type="file" accept=".json,application/json" hidden>
+          </div>
+          <p class="field-note profile-note">可多选 PDF、DOCX、TXT、MD。文件在本地解析后，仅把文字发送到你配置的千问接口；AI 结果会填入编辑区供你核对，不会直接提交网申。扫描版 PDF 需先 OCR。</p>
+
+          <fieldset>
+            <legend>1. 基本信息</legend>
+            <div class="two-columns">
+              <label>姓名<input id="profileNameInput" type="text" autocomplete="off"></label>
+              <label>姓 / Last name<input id="profileFamilyNameInput" type="text" autocomplete="off"></label>
+              <label>名 / First name<input id="profileGivenNameInput" type="text" autocomplete="off"></label>
+              <label>中间名<input id="profileMiddleNameInput" type="text" autocomplete="off"></label>
+              <label>曾用名<input id="profileFormerNameInput" type="text" autocomplete="off"></label>
+              <label>姓名全拼<input id="profileNamePinyinInput" type="text" autocomplete="off"></label>
+              <label>英文名<input id="profileEnglishNameInput" type="text" autocomplete="off"></label>
+              <label>手机国家代码<input id="profilePhoneCountryCodeInput" type="text" autocomplete="off"></label>
+              <label>手机号码<input id="profilePhoneInput" type="tel" autocomplete="off"></label>
+              <label>备用电话<input id="profileAlternatePhoneInput" type="tel" autocomplete="off"></label>
+              <label>邮箱<input id="profileEmailInput" type="email" autocomplete="off"></label>
+              <label>备用邮箱<input id="profileAlternateEmailInput" type="email" autocomplete="off"></label>
+              <label>微信号<input id="profileWechatInput" type="text" autocomplete="off"></label>
+              <label>个人主页<input id="profileUrlInput" type="url" autocomplete="off"></label>
+              <label>GitHub<input id="profileGithubInput" type="url" autocomplete="off"></label>
+              <label>LinkedIn<input id="profileLinkedinInput" type="url" autocomplete="off"></label>
+              <label>现居城市<input id="profileCurrentCityInput" type="text" autocomplete="off"></label>
+              <label>现居省份<input id="profileCurrentProvinceInput" type="text" autocomplete="off"></label>
+              <label>现居国家<input id="profileCurrentCountryInput" type="text" autocomplete="off"></label>
+              <label>籍贯<input id="profileNativePlaceInput" type="text" autocomplete="off"></label>
+              <label>通讯地址<input id="profileAddressInput" type="text" autocomplete="off"></label>
+              <label>邮政编码<input id="profilePostalCodeInput" type="text" autocomplete="off"></label>
+              <label>国籍<input id="profileNationalityInput" type="text" autocomplete="off"></label>
+              <label>公民身份<input id="profileCitizenshipInput" type="text" autocomplete="off"></label>
+              <label>当前公司<input id="profileCurrentCompanyInput" type="text" autocomplete="off"></label>
+              <label>当前职位<input id="profileCurrentTitleInput" type="text" autocomplete="off"></label>
+              <label>累计工作年限<input id="profileYearsExperienceInput" type="text" placeholder="例如：3年" autocomplete="off"></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>2. 求职偏好与到岗条件</legend>
+            <div class="two-columns">
+              <label>期望职位<input id="profileExpectedRoleInput" type="text" autocomplete="off"></label>
+              <label>期望职能类别<input id="profileExpectedJobFamilyInput" type="text" autocomplete="off"></label>
+              <label>期望行业<input id="profileExpectedIndustryInput" type="text" autocomplete="off"></label>
+              <label>期望城市<input id="profileExpectedCityInput" type="text" placeholder="上海, 深圳" autocomplete="off"></label>
+              <label>期望最低薪资<input id="profileExpectedSalaryMinInput" type="text" autocomplete="off"></label>
+              <label>期望最高薪资<input id="profileExpectedSalaryMaxInput" type="text" autocomplete="off"></label>
+              <label>薪资周期<input id="profileSalaryPeriodInput" type="text" placeholder="月 / 年" autocomplete="off"></label>
+              <label>币种<input id="profileCurrencyInput" type="text" placeholder="CNY" autocomplete="off"></label>
+              <label>可到岗日期<input id="profileAvailableDateInput" type="text" placeholder="YYYY-MM-DD / 随时" autocomplete="off"></label>
+              <label>用工类型<input id="profileEmploymentTypeInput" type="text" placeholder="全职 / 兼职 / 实习" autocomplete="off"></label>
+              <label>办公方式<input id="profileWorkModeInput" type="text" placeholder="现场 / 混合 / 远程" autocomplete="off"></label>
+              <label>接受异地调动<input id="profileRelocateInput" type="text" placeholder="是 / 否" autocomplete="off"></label>
+              <label>接受国内出差<input id="profileTravelDomesticInput" type="text" autocomplete="off"></label>
+              <label>接受海外出差<input id="profileTravelInternationalInput" type="text" autocomplete="off"></label>
+              <label>接受兼职<input id="profileAcceptPartTimeInput" type="text" autocomplete="off"></label>
+              <label>接受临时岗位<input id="profileAcceptTemporaryInput" type="text" autocomplete="off"></label>
+              <label>接受弹性工作<input id="profileFlexibleWorkInput" type="text" autocomplete="off"></label>
+              <label>申请信息来源<input id="profileSourceInput" type="text" autocomplete="off"></label>
+              <label>内推人姓名<input id="profileReferrerNameInput" type="text" autocomplete="off"></label>
+              <label>内推人工号<input id="profileReferrerEmployeeIdInput" type="text" autocomplete="off"></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="sensitive-fieldset">
+            <legend>3. 敏感信息（永不默认勾选）</legend>
+            <p class="field-note">仅填写你愿意保存在本机并用于网申的项目。预览中会遮罩显示，并要求逐项勾选。</p>
+            <div class="two-columns">
+              <label>证件类型<input id="profileIdTypeInput" type="text" placeholder="例如：居民身份证" autocomplete="off"></label>
+              <label>证件号码<input id="profileIdNumberInput" type="text" autocomplete="off"></label>
+              <label>证件有效期<input id="profileIdExpiryInput" type="text" autocomplete="off"></label>
+              <label>护照号码<input id="profilePassportNumberInput" type="text" autocomplete="off"></label>
+              <label>护照有效期<input id="profilePassportExpiryInput" type="text" autocomplete="off"></label>
+              <label>出生日期<input id="profileBirthDateInput" type="date" autocomplete="off"></label>
+              <label>出生地<input id="profileBirthPlaceInput" type="text" autocomplete="off"></label>
+              <label>性别<input id="profileGenderInput" type="text" autocomplete="off"></label>
+              <label>民族<input id="profileEthnicityInput" type="text" autocomplete="off"></label>
+              <label>健康状况<input id="profileHealthStatusInput" type="text" autocomplete="off"></label>
+              <label>婚姻状况<input id="profileMaritalStatusInput" type="text" autocomplete="off"></label>
+              <label>政治面貌<input id="profilePoliticalStatusInput" type="text" autocomplete="off"></label>
+              <label>入党时间<input id="profilePartyJoinDateInput" type="text" placeholder="YYYY-MM" autocomplete="off"></label>
+              <label>户口所在地<input id="profileHukouLocationInput" type="text" autocomplete="off"></label>
+              <label>户口性质<input id="profileHukouTypeInput" type="text" autocomplete="off"></label>
+              <label>身高（cm）<input id="profileHeightInput" type="number" min="0" autocomplete="off"></label>
+              <label>体重（kg）<input id="profileWeightInput" type="number" min="0" autocomplete="off"></label>
+              <label>残障状况<input id="profileDisabilityInput" type="text" autocomplete="off"></label>
+              <label>退伍军人身份<input id="profileVeteranInput" type="text" autocomplete="off"></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="sensitive-fieldset">
+            <legend>4. 工作资格、合规与背调</legend>
+            <p class="field-note">这些问题通常是企业声明或合规问卷；只保存你明确确认过的答案，AI 不会替你猜。</p>
+            <div class="two-columns">
+              <label>工作许可<input id="profileWorkAuthorizationInput" type="text" autocomplete="off"></label>
+              <label>签证类型<input id="profileVisaTypeInput" type="text" autocomplete="off"></label>
+              <label>是否需要签证担保<input id="profileRequiresSponsorshipInput" type="text" autocomplete="off"></label>
+              <label>是否受竞业限制<input id="profileNonCompeteInput" type="text" autocomplete="off"></label>
+              <label>是否有亲属在该公司<input id="profileRelativeAtCompanyInput" type="text" autocomplete="off"></label>
+              <label>亲属详情<input id="profileRelativeDetailsInput" type="text" autocomplete="off"></label>
+              <label>纪律处分记录<input id="profileDisciplinaryHistoryInput" type="text" autocomplete="off"></label>
+              <label>刑事记录<input id="profileCriminalHistoryInput" type="text" autocomplete="off"></label>
+              <label>利益冲突<input id="profileConflictOfInterestInput" type="text" autocomplete="off"></label>
+              <label>是否接受背景调查<input id="profileBackgroundCheckInput" type="text" autocomplete="off"></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>5. 教育 / 工作 / 实习 / 项目（逐条结构化）</legend>
+            <p class="field-note">每段经历都是独立卡片，每个常见网申字段都有单独输入框。上传多份简历时会按“名称 + 职位/专业 + 时间”合并去重，不再把多个项目挤在同一段文字里。</p>
+
+            <section class="record-editor" aria-labelledby="educationRecordsTitle">
+              <div class="record-editor-heading">
+                <h3 id="educationRecordsTitle">教育经历</h3>
+                <button class="text-button record-add-button" type="button" data-add-record="education">＋ 添加教育经历</button>
+              </div>
+              <div id="profileEducationRecords" class="record-list" data-record-list="education"></div>
+            </section>
+
+            <section class="record-editor" aria-labelledby="workRecordsTitle">
+              <div class="record-editor-heading">
+                <h3 id="workRecordsTitle">工作经历</h3>
+                <button class="text-button record-add-button" type="button" data-add-record="work">＋ 添加工作经历</button>
+              </div>
+              <div id="profileWorkRecords" class="record-list" data-record-list="work"></div>
+            </section>
+
+            <section class="record-editor" aria-labelledby="internshipRecordsTitle">
+              <div class="record-editor-heading">
+                <h3 id="internshipRecordsTitle">实习经历</h3>
+                <button class="text-button record-add-button" type="button" data-add-record="internships">＋ 添加实习经历</button>
+              </div>
+              <div id="profileInternshipRecords" class="record-list" data-record-list="internships"></div>
+            </section>
+
+            <section class="record-editor" aria-labelledby="projectRecordsTitle">
+              <div class="record-editor-heading">
+                <h3 id="projectRecordsTitle">项目经历</h3>
+                <button class="text-button record-add-button" type="button" data-add-record="projects">＋ 添加项目经历</button>
+              </div>
+              <div id="profileProjectRecords" class="record-list" data-record-list="projects"></div>
+            </section>
+
+            <p class="field-note">工作与实习已分开保存。只有网页确实没有工作入口且你开启下方策略时，系统才会把工作经历作为“跨栏目建议”，并始终要求人工确认。</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>6. 科研 / 校园 / 志愿经历</legend>
+            <label>科研经历（每行一段）<textarea id="profileResearchInput" rows="4" placeholder="研究名称 | 机构 | 角色 | 开始 | 结束 | 导师 | 方法 | 成果 | 概述"></textarea></label>
+            <label>校园经历（每行一段）<textarea id="profileCampusInput" rows="4" placeholder="组织 | 职务 | 开始 | 结束 | 职责 | 成果 | 概述"></textarea></label>
+            <label>志愿经历（每行一段）<textarea id="profileVolunteerInput" rows="4" placeholder="组织 | 角色 | 开始 | 结束 | 地点 | 时长 | 概述"></textarea></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>7. 技能 / 语言 / 证书 / 成果</legend>
+            <label>技能（每行一项）<textarea id="profileSkillsInput" rows="4" placeholder="技能名 | 熟练度 | 年限 | 说明"></textarea></label>
+            <label>语言（每行一项）<textarea id="profileLanguagesInput" rows="4" placeholder="语种 | 综合水平 | 读 | 写 | 说 | 听 | 考试 | 分数"></textarea></label>
+            <label>证书（每行一项）<textarea id="profileCertificatesInput" rows="4" placeholder="名称 | 发证机构 | 取得日期 | 到期日期 | 证书编号 | 验证链接"></textarea></label>
+            <label>奖励与荣誉（每行一项）<textarea id="profileAwardsInput" rows="4" placeholder="奖项 | 颁发方 | 日期 | 级别 | 说明"></textarea></label>
+            <label>论文与出版物（每行一项）<textarea id="profilePublicationsInput" rows="4" placeholder="标题 | 出版方 | 日期 | 作者 | 链接 | 摘要"></textarea></label>
+            <label>专利（每行一项）<textarea id="profilePatentsInput" rows="4" placeholder="名称 | 编号 | 状态 | 日期 | 发明人 | 说明"></textarea></label>
+          </fieldset>
+
+          <fieldset class="sensitive-fieldset">
+            <legend>8. 联系人资料（敏感，永不默认勾选）</legend>
+            <label>家庭成员（每行一人）<textarea id="profileFamilyMembersInput" rows="3" placeholder="姓名 | 关系 | 单位 | 职务 | 电话 | 政治面貌"></textarea></label>
+            <label>紧急联系人（每行一人）<textarea id="profileEmergencyContactsInput" rows="3" placeholder="姓名 | 关系 | 电话 | 单位 | 地址"></textarea></label>
+            <label>证明人 / 推荐人（每行一人）<textarea id="profileReferencesInput" rows="3" placeholder="姓名 | 关系 | 公司 | 职位 | 电话 | 邮箱"></textarea></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>9. 陈述类问题</legend>
+            <label>自我评价<textarea id="profileSelfEvaluationInput" rows="5"></textarea></label>
+            <label>个人优势<textarea id="profileStrengthsInput" rows="4"></textarea></label>
+            <label>兴趣爱好<input id="profileHobbiesInput" type="text"></label>
+            <label>职业规划<textarea id="profileCareerPlanInput" rows="4"></textarea></label>
+            <label>为什么选择该公司<textarea id="profileWhyCompanyInput" rows="4"></textarea></label>
+            <label>为什么申请该岗位<textarea id="profileWhyRoleInput" rows="4"></textarea></label>
+            <label>求职信 / 动机信<textarea id="profileCoverLetterInput" rows="5"></textarea></label>
+            <label>其他说明<textarea id="profileOtherInfoInput" rows="3"></textarea></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>10. AI 填表策略</legend>
+            <label class="inline-check"><input id="profileAllowWorkAsInternshipInput" type="checkbox"> 当表单没有工作经历入口时，允许 AI 建议把真实工作经历映射到“实习经历”（始终人工确认）</label>
+            <label class="inline-check"><input id="profileUseAIReasoningInput" type="checkbox"> 扫描表单后使用千问复核低置信度和未识别字段</label>
+          </fieldset>
+        </div>
+
+        <footer>
+          <span id="profileMessage" role="status"></span>
+          <button id="saveProfileButton" class="primary-button" type="submit">保存资料库</button>
+        </footer>
+      </form>
+    </dialog>
+
     <dialog id="confirmDialog" class="confirm-dialog">
       <form method="dialog">
         <div class="confirm-icon">!</div>
@@ -217,6 +499,9 @@
     </dialog>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="autofill-core.js"></script>
+    <script src="vendor/mammoth.browser.min.js"></script>
+    <script src="resume-file-parser.js"></script>
     <script src="sidepanel.js"></script>
   </body>
 </html>
