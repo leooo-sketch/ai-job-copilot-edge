@@ -103,7 +103,7 @@
     rule("basics.currentTitle", "当前职位", ["当前职位", "现任职位", "当前岗位", "current title", "current position"]),
     rule("basics.yearsOfExperience", "工作年限", ["工作年限", "工作经验年限", "总工作年限", "years of experience"]),
 
-    rule("jobPreferences.expectedRole", "期望职位", ["期望职位", "意向岗位", "应聘职位", "目标岗位", "求职意向", "desired role", "target position"], { excludes: ["当前职位", "项目角色"] }),
+    rule("jobPreferences.expectedRole", "期望职位", ["期望职位", "意向岗位", "应聘职位", "应聘岗位", "目标岗位", "求职意向", "职位关键词", "搜索职位关键词", "desired role", "target position", "job keyword"], { excludes: ["当前职位", "项目角色"], sections: ["求职意向", "投递意向", "应聘信息", "job preference"] }),
     rule("jobPreferences.expectedJobFamily", "职位类别", ["期望职位类别", "岗位类别", "职能类别", "job family"]),
     rule("jobPreferences.expectedIndustry", "期望行业", ["期望行业", "意向行业", "行业偏好", "preferred industry"]),
     rule("jobPreferences.expectedCities", "期望城市", ["期望城市", "意向城市", "期望工作地点", "工作地点意向", "preferred location", "desired location"], { excludes: ["现居", "籍贯", "户口"] }),
@@ -293,9 +293,38 @@
   function cloneDefaultProfile() { return JSON.parse(JSON.stringify(DEFAULT_PROFILE)); }
   function normalizeText(value) {
     return String(value || "").toLowerCase()
-      .replace(/(?:请|请您)?(?:填写|输入|选择|上传|勾选)/g, "")
-      .replace(/\b(required|optional|please|enter|select)\b/g, "")
+      .replace(/(?:请|请您)?(?:填写|输入|选择|上传|勾选|搜索|确认)/g, "")
+      .replace(/\b(required|optional|please|enter|input|select|search|choose|confirm)\b/g, "")
       .replace(/[\s\-—_：:，,。\.、/\\()（）\[\]【】*＊]+/g, "").trim();
+  }
+
+  function textBigrams(value) {
+    const text = normalizeText(value);
+    if (!text) return [];
+    if (text.length === 1) return [text];
+    const output = [];
+    for (let index = 0; index < text.length - 1; index += 1) output.push(text.slice(index, index + 2));
+    return output;
+  }
+
+  function textSimilarity(left, right) {
+    const a = normalizeText(left);
+    const b = normalizeText(right);
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    if (Math.min(a.length, b.length) >= 2 && (a.includes(b) || b.includes(a))) return Math.min(a.length, b.length) / Math.max(a.length, b.length);
+    const leftPairs = textBigrams(a);
+    const rightPairs = textBigrams(b);
+    const counts = new Map();
+    leftPairs.forEach((pair) => counts.set(pair, (counts.get(pair) || 0) + 1));
+    let overlap = 0;
+    rightPairs.forEach((pair) => {
+      if ((counts.get(pair) || 0) > 0) {
+        overlap += 1;
+        counts.set(pair, counts.get(pair) - 1);
+      }
+    });
+    return 2 * overlap / (leftPairs.length + rightPairs.length);
   }
   function cleanString(value, maxLength = 12000) { return typeof value === "string" || typeof value === "number" ? String(value).trim().slice(0, maxLength) : ""; }
   function cleanBoolean(value, fallback) { return typeof value === "boolean" ? value : fallback; }
@@ -345,10 +374,11 @@
   function scoreRule(field, candidateRule) {
     const label = normalizeText(field.label);
     const placeholder = normalizeText(field.placeholder);
-    const attributes = normalizeText(`${field.name || ""} ${field.id || ""} ${field.ariaLabel || ""}`);
+    const attributes = normalizeText(`${field.name || ""} ${field.id || ""} ${field.ariaLabel || ""} ${field.className || ""}`);
+    const description = label ? "" : normalizeText(field.description);
     const section = normalizeText(field.section);
     const autocomplete = normalizeText(field.autocomplete);
-    const allText = `${label}|${placeholder}|${attributes}|${section}`;
+    const allText = `${label}|${placeholder}|${attributes}|${description}|${section}`;
     if ((candidateRule.excludes || []).some((term) => allText.includes(normalizeText(term)))) return null;
     if (candidateRule.types?.length && field.type && !candidateRule.types.includes(String(field.type).toLowerCase()) && !field.customSelect && field.tag !== "select") return null;
     let score = 0;
@@ -362,6 +392,24 @@
       else if (placeholder && alias.length >= 2 && placeholder.includes(alias) && score < 0.82) { score = 0.82; reason = "占位提示匹配"; }
       else if (attributes && attributes === alias && score < 0.86) { score = 0.86; reason = "字段属性精确匹配"; }
       else if (attributes && alias.length >= 3 && attributes.includes(alias) && score < 0.76) { score = 0.76; reason = "字段属性匹配"; }
+      else if (description && description === alias && score < 0.9) { score = 0.9; reason = "字段说明与邻近标签精确匹配"; }
+      else if (description && alias.length >= 2 && description.includes(alias) && score < 0.83) { score = 0.83; reason = "字段说明与邻近标签匹配"; }
+      else {
+        const similarities = [
+          { value: label, weight: 1, name: "字段标签" },
+          { value: placeholder, weight: 0.94, name: "占位提示" },
+          { value: description, weight: 0.91, name: "邻近说明" },
+          { value: attributes, weight: 0.82, name: "字段属性" }
+        ].filter((item) => item.value && alias.length >= 3);
+        for (const signal of similarities) {
+          const similarity = textSimilarity(signal.value, alias);
+          const fuzzyScore = (0.7 + similarity * 0.18) * signal.weight;
+          if (similarity >= 0.64 && fuzzyScore > score) {
+            score = fuzzyScore;
+            reason = `${signal.name}模糊匹配（${Math.round(similarity * 100)}%）`;
+          }
+        }
+      }
     }
     if ((candidateRule.autocomplete || []).some((value) => autocomplete === normalizeText(value))) { score = Math.max(score, 0.99); reason = "浏览器标准字段类型匹配"; }
     if (!score) return null;
@@ -435,7 +483,7 @@
       const key = match.rule.path.split(".").pop();
       const desired = normalizeText(field.currentValue);
       if (!desired) continue;
-      const groupKey = `${kind}:${repeatIndex}`;
+      const groupKey = cleanString(field.repeatGroupId, 120) || `${kind}:${repeatIndex}`;
       if (!groups.has(groupKey)) groups.set(groupKey, { kind, repeatIndex, votes: new Map(), evidence: [] });
       const group = groups.get(groupKey);
       const primaryKey = RECORD_PRIMARY_KEYS[kind];
@@ -482,7 +530,7 @@
       if (!match) return base;
       const counterKey = match.rule.path;
       const repeatGroupKey = match.rule.collection && field.repeatKind === match.rule.collection && Number.isInteger(Number(field.repeatIndex))
-        ? `${field.repeatKind}:${Math.max(0, Number(field.repeatIndex))}` : "";
+        ? cleanString(field.repeatGroupId, 120) || `${field.repeatKind}:${Math.max(0, Number(field.repeatIndex))}` : "";
       const alignedRecord = repeatGroupKey ? repeatSourceIndices.get(repeatGroupKey) : null;
       const explicitOccurrence = alignedRecord ? alignedRecord.sourceIndex
         : repeatGroupKey ? Math.max(0, Number(field.repeatIndex)) : null;
@@ -495,7 +543,7 @@
       const crossWorkToInternship = resolved.crossCategory;
       const mapped = {
         ...base, canonicalKey,
-        canonicalLabel: match.rule.collection ? `${match.rule.label} ${occurrence + 1}` : match.rule.label,
+        canonicalLabel: match.rule.collection ? formatRepeatCanonicalLabel(profile, match.rule.collection, occurrence, match.rule.label) : match.rule.label,
         sensitive: Boolean(match.rule.sensitive || isSensitivePath(canonicalKey)), confidence: match.score, value,
         reason: crossWorkToInternship
           ? "跨栏目建议：网页为实习经历，但资料来源标记为工作经历，必须确认后填写"
@@ -509,6 +557,13 @@
       if (crossWorkToInternship || match.ambiguous || match.score < HIGH_CONFIDENCE || mapped.sensitive) return { ...mapped, status: "review", reason: mapped.sensitive ? `${mapped.reason}；敏感信息必须由你勾选确认` : `${mapped.reason}；请人工确认` };
       return { ...mapped, status: "ready", selected: true };
     });
+  }
+
+  function formatRepeatCanonicalLabel(profile, collection, occurrence, fieldLabel) {
+    const collectionLabel = ({ education: "教育经历", work: "工作经历", internships: "实习经历", projects: "项目经历", research: "科研经历", campus: "校园经历", volunteer: "志愿经历" })[collection] || collection;
+    const primaryKey = RECORD_PRIMARY_KEYS[collection];
+    const title = cleanString(profile?.[collection]?.[occurrence]?.[primaryKey], 80);
+    return `${collectionLabel} ${occurrence + 1}${title ? `「${title}」` : ""} · ${fieldLabel}`;
   }
 
   function flattenProfile(profileInput, options = {}) {
@@ -713,7 +768,7 @@
 
   return {
     PROFILE_KEY, PROFILE_SCHEMA_VERSION, HIGH_CONFIDENCE, REVIEW_CONFIDENCE, DEFAULT_PROFILE,
-    RECORD_SCHEMAS, FIELD_RULES, cloneDefaultProfile, sanitizeProfile, normalizeText,
+    RECORD_SCHEMAS, FIELD_RULES, cloneDefaultProfile, sanitizeProfile, normalizeText, textSimilarity,
     bestRuleForField, buildFillPlan, profileCompleteness, extractProfileDraftFromResume,
     parseRecordLines, serializeRecordLines, flattenProfile, buildAIProfileView,
     applyAIPlanDecisions, mergeProfilePatch, filterProfileByEvidence, getPathValue, isSensitivePath

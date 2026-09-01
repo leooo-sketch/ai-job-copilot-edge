@@ -10,7 +10,7 @@
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-6654e8)
 ![Microsoft Edge](https://img.shields.io/badge/Microsoft%20Edge-Side%20Panel-0b84ff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2fa978.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-18%20passing-2fa978)](#development)
+[![Tests](https://img.shields.io/badge/tests-21%20passing-2fa978)](#development)
 
 [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md)
 
@@ -32,8 +32,9 @@ No hosted backend. No CAPTCHA bypass. No hidden application decisions.
 
 | Release | Classification | What it represents |
 |---|---|---|
+| `v0.5.0` | Latest enhanced release | Fuzzy field recognition, DOM-based repeat-card grouping, confirmed async job suggestions, and native/ARIA/framework choice controls |
 | `v0.1.0` | Initial public release | Edge side panel, supported job-site adapters, AI matching, review queue, and guarded application actions |
-| `v0.4.1` | Latest cumulative release | Reliable application autofill, profile schema v3, local multi-resume parsing, Qwen review, dynamic repeat sections, and compatibility fixes |
+| `v0.4.1` | Reliable autofill release | Reliable application autofill, profile schema v3, local multi-resume parsing, Qwen review, dynamic repeat sections, and compatibility fixes |
 
 Versions `0.2.0` through `0.4.0` are documented development milestones included in the `v0.4.1` source snapshot; they are not presented as separate source archives because no independent snapshots were preserved. See [CHANGELOG.md](CHANGELOG.md) for the complete, chronological breakdown.
 
@@ -44,6 +45,10 @@ Versions `0.2.0` through `0.4.0` are documented development milestones included 
 - **Comprehensive profile v3** — education, work, internships, and projects are separate repeatable cards with dedicated fields for common enterprise application forms.
 - **Dynamic section preparation** — safely exposes “add education/work/internship/project” cards before scanning, then keeps each page card aligned with one source record.
 - **Anchor-aware record alignment** — existing school, company, or project names select the correct local record before other fields are planned; common hidden framework selects and readonly date controls are included.
+- **DOM card isolation** — derives each repeat record from its real page container and labels previews with the source title, avoiding one experience being spread over multiple cards.
+- **Confirmed async choices** — editable job-keyword comboboxes are typed, awaited, uniquely matched, and confirmed; failed attempts restore the original value.
+- **Choice-control compatibility** — supports native radios without `name`, ARIA radio groups, and common Ant Design, Element, Arco, Semi, and iView structures with Chinese/English equivalents.
+- **Conservative fuzzy recognition** — combines ARIA descriptions, nearby labels, and safe semantic attributes; typo-like matches remain visible for human review.
 - **Multi-resume import** — locally extract PDF, DOCX, TXT, or Markdown, then let Qwen consolidate evidence-backed fields for review.
 - **Qwen semantic review** — improve custom-field mappings without allowing the model to invent values; every fill value must resolve to an existing profile path.
 - **Cross-section guardrail** — a real work record may be suggested for an internship-only form section, but stays labeled as work and is never preselected.

@@ -1,11 +1,12 @@
 (function installReliableAutofillAgent() {
   "use strict";
 
-  if (globalThis.__JOB_AUTOFILL_AGENT__?.version === 2) return;
+  if (globalThis.__JOB_AUTOFILL_AGENT__?.version === 3) return;
 
   const state = {
-    version: 2,
+    version: 3,
     fieldMap: new Map(),
+    nearbyLabelCache: new WeakMap(),
     lastScanAt: 0
   };
   globalThis.__JOB_AUTOFILL_AGENT__ = state;
@@ -57,16 +58,16 @@
   function scanFields() {
     const elements = collectFormElements().slice(0, 300);
     const fields = [];
-    const handledRadioNames = new Set();
+    const handledChoiceElements = new Set();
     state.fieldMap = new Map();
+    state.nearbyLabelCache = new WeakMap();
 
     for (const element of elements) {
-      const type = String(element.getAttribute("type") || element.type || "").toLowerCase();
-      if (type === "radio" && element.name) {
-        if (handledRadioNames.has(element.name)) continue;
-        handledRadioNames.add(element.name);
-        const group = elements.filter((candidate) => candidate instanceof HTMLInputElement && candidate.type === "radio" && candidate.name === element.name);
-        fields.push(describeRadioGroup(group, fields.length));
+      if (isRadioLike(element)) {
+        if (handledChoiceElements.has(element)) continue;
+        const group = collectChoiceGroup(element, elements);
+        group.forEach((candidate) => handledChoiceElements.add(candidate));
+        fields.push(describeChoiceGroup(group, fields.length));
         continue;
       }
       fields.push(describeElement(element, fields.length));
@@ -77,15 +78,64 @@
   }
 
   function annotateRepeatGroups(fields) {
+    const grouped = new Map();
+    for (const field of fields) {
+      const kind = inferRepeatKind(field);
+      if (!kind) continue;
+      const element = state.fieldMap.get(field.fieldId)?.element || state.fieldMap.get(field.fieldId)?.elements?.[0];
+      const container = element ? findRepeatCardContainer(element, kind, fields) : null;
+      if (!container) continue;
+      if (!grouped.has(kind)) grouped.set(kind, new Map());
+      if (!grouped.get(kind).has(container)) grouped.get(kind).set(container, []);
+      grouped.get(kind).get(container).push(field);
+    }
+
+    for (const [kind, containerMap] of grouped) {
+      const groups = [...containerMap.entries()].sort((left, right) => compareDocumentOrder(left[0], right[0]));
+      groups.forEach(([, groupFields], repeatIndex) => {
+        for (const field of groupFields) {
+          field.repeatKind = kind;
+          field.repeatIndex = repeatIndex;
+          field.repeatGroupId = `${kind}:${repeatIndex}`;
+        }
+      });
+    }
+
     const currentIndex = { education: -1, work: -1, internships: -1, projects: -1 };
     for (const field of fields) {
+      if (field.repeatGroupId) continue;
       const kind = inferRepeatKind(field);
       if (!kind) continue;
       if (isRepeatAnchor(field, kind)) currentIndex[kind] += 1;
       if (currentIndex[kind] < 0) currentIndex[kind] = 0;
       field.repeatKind = kind;
       field.repeatIndex = currentIndex[kind];
+      field.repeatGroupId = `${kind}:${currentIndex[kind]}`;
     }
+  }
+
+  function findRepeatCardContainer(element, kind, fields) {
+    const candidates = [];
+    let current = element.parentElement;
+    for (let depth = 0; current && depth < 9 && current !== document.body; depth += 1, current = current.parentElement) {
+      const contained = fields.filter((field) => {
+        if (inferRepeatKind(field) !== kind) return false;
+        const target = state.fieldMap.get(field.fieldId);
+        const candidate = target?.element || target?.elements?.[0];
+        return candidate && current.contains(candidate);
+      });
+      if (contained.length < 2 || contained.length > 20) continue;
+      const anchorCount = contained.filter((field) => isRepeatAnchor(field, kind)).length;
+      if (anchorCount === 1) candidates.push(current);
+      if (anchorCount > 1) break;
+    }
+    return candidates[0] || null;
+  }
+
+  function compareDocumentOrder(left, right) {
+    if (left === right) return 0;
+    const position = left.compareDocumentPosition(right);
+    return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
   }
 
   function inferRepeatKind(field) {
@@ -120,7 +170,13 @@
       ".arco-select-view:not(.arco-select-view-disabled)",
       ".semi-select:not(.semi-select-disabled)",
       ".ivu-select:not(.ivu-select-disabled)",
-      "[aria-haspopup='listbox'][class*='select']"
+      "[aria-haspopup='listbox'][class*='select']",
+      "[role='radio']",
+      ".ant-radio-wrapper:not(.ant-radio-wrapper-disabled)",
+      ".el-radio:not(.is-disabled)",
+      ".arco-radio:not(.arco-radio-disabled)",
+      ".semi-radio:not(.semi-radio-disabled)",
+      ".ivu-radio-wrapper:not(.ivu-radio-wrapper-disabled)"
     ].join(",");
     const roots = [document];
     const found = new Set();
@@ -133,9 +189,13 @@
         if (isFrameworkSelectWrapper(element)) {
           const usableInnerControl = [...element.querySelectorAll("input, [role='combobox']")].find((candidate) => isUsableElement(candidate));
           if (usableInnerControl) continue;
+        } else if (isFrameworkRadioWrapper(element)) {
+          const usableInnerRadio = [...element.querySelectorAll("input[type='radio'], [role='radio']")].find((candidate) => isUsableElement(candidate));
+          if (usableInnerRadio) continue;
         } else {
-          const wrapper = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, [aria-haspopup='listbox'][class*='select']");
-          if (wrapper && found.has(wrapper)) continue;
+          const selectWrapper = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, [aria-haspopup='listbox'][class*='select']");
+          const radioWrapper = element.closest(".ant-radio-wrapper, .el-radio, .arco-radio, .semi-radio, .ivu-radio-wrapper");
+          if ((selectWrapper && found.has(selectWrapper)) || (radioWrapper && found.has(radioWrapper))) continue;
         }
         found.add(element);
         output.push(element);
@@ -271,15 +331,60 @@
     return true;
   }
 
-  function describeRadioGroup(elements, index) {
+  function isFrameworkRadioWrapper(element) {
+    return element instanceof HTMLElement && element.matches(".ant-radio-wrapper, .el-radio, .arco-radio, .semi-radio, .ivu-radio-wrapper");
+  }
+
+  function isRadioLike(element) {
+    return element instanceof HTMLInputElement && element.type === "radio"
+      || element instanceof HTMLElement && (element.getAttribute("role") === "radio" || isFrameworkRadioWrapper(element));
+  }
+
+  function collectChoiceGroup(element, allElements) {
+    if (element instanceof HTMLInputElement && element.type === "radio" && element.name) {
+      return allElements.filter((candidate) => candidate instanceof HTMLInputElement && candidate.type === "radio" && candidate.name === element.name && candidate.form === element.form);
+    }
+    const findContainer = () => {
+      let current = element.parentElement;
+      for (let depth = 0; current && depth < 7 && current !== document.body; depth += 1, current = current.parentElement) {
+        const members = allElements.filter((candidate) => isRadioLike(candidate) && current.contains(candidate));
+        if (members.length >= 2 && members.length <= 12) return current;
+      }
+      return element.closest("fieldset, [role='radiogroup'], .ant-form-item, .el-form-item, [class*='form-item'], [class*='field']");
+    };
+    const container = findContainer();
+    const group = container ? allElements.filter((candidate) => isRadioLike(candidate) && container.contains(candidate)) : [element];
+    return group.length ? group : [element];
+  }
+
+  function choiceValue(element) {
+    if (!element) return "";
+    const input = element instanceof HTMLInputElement ? element : element.querySelector?.("input[type='radio']");
+    return compactText(input?.value || element.getAttribute("data-value") || element.getAttribute("value") || element.textContent);
+  }
+
+  function choiceLabel(element) {
+    const direct = findDirectLabel(element);
+    if (direct) return direct;
+    const wrapper = element.closest?.("label, .ant-radio-wrapper, .el-radio, .arco-radio, .semi-radio, .ivu-radio-wrapper") || element;
+    return compactText(wrapper.getAttribute?.("aria-label") || wrapper.textContent || choiceValue(element));
+  }
+
+  function isChoiceChecked(element) {
+    const input = element instanceof HTMLInputElement ? element : element.querySelector?.("input[type='radio']");
+    return Boolean(input?.checked || element.getAttribute("aria-checked") === "true" || element.matches?.(".is-checked, .ant-radio-wrapper-checked, .arco-radio-checked, .semi-radio-checked, .ivu-radio-wrapper-checked"));
+  }
+
+  function describeChoiceGroup(elements, index) {
     const first = elements[0];
     const fieldId = makeFieldId(index);
-    const label = findFieldLabel(first);
+    const container = first.closest?.("fieldset, [role='radiogroup'], .ant-form-item, .el-form-item, [class*='form-item'], [class*='field']");
+    const label = compactText(container?.querySelector?.(":scope > legend, :scope > label, :scope > [class*='label']")?.textContent) || findFieldLabel(first);
     const options = elements.map((element) => ({
-      value: element.value,
-      label: findDirectLabel(element) || element.value
+      value: choiceValue(element),
+      label: choiceLabel(element)
     }));
-    state.fieldMap.set(fieldId, { kind: "radio", elements });
+    state.fieldMap.set(fieldId, { kind: "choice-group", elements, element: first });
     return {
       fieldId,
       label,
@@ -293,10 +398,12 @@
       type: "radio",
       inputMode: "choice",
       options,
-      currentValue: elements.find((element) => element.checked)?.value || "",
+      currentValue: choiceValue(elements.find(isChoiceChecked)) || "",
       required: elements.some((element) => element.required || element.getAttribute("aria-required") === "true"),
       customSelect: false,
-      unsupported: false
+      unsupported: false,
+      description: collectFieldEvidence(first),
+      className: compactText(first.className)
     };
   }
 
@@ -322,6 +429,8 @@
       id: element.id || "",
       ariaLabel: element.getAttribute("aria-label") || "",
       autocomplete: element.getAttribute("autocomplete") || "",
+      description: collectFieldEvidence(element),
+      className: compactText(element.className),
       section: findSection(element),
       tag,
       type,
@@ -351,16 +460,60 @@
     return wrapped ? stripControlText(wrapped, element) : "";
   }
 
+  function referencedText(element, attributeName) {
+    return compactText(String(element.getAttribute(attributeName) || "").split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent || "").join(" "));
+  }
+
+  function findNearbyLabelText(element) {
+    if (state.nearbyLabelCache.has(element)) return state.nearbyLabelCache.get(element);
+    const rect = element.getBoundingClientRect();
+    const nearby = [...document.querySelectorAll("label, legend, dt, th, [class*='label'], [class*='title']")]
+      .filter((candidate) => candidate !== element && isUsableElement(candidate))
+      .map((candidate) => {
+        const text = compactText(candidate.textContent);
+        const other = candidate.getBoundingClientRect();
+        const verticalGap = Math.min(Math.abs(rect.top - other.bottom), Math.abs(other.top - rect.bottom));
+        const horizontalGap = Math.min(Math.abs(rect.left - other.right), Math.abs(other.left - rect.right));
+        const sameRow = Math.abs((rect.top + rect.bottom) / 2 - (other.top + other.bottom) / 2) < Math.max(18, rect.height);
+        const above = other.bottom <= rect.top + 6 && rect.top - other.bottom < 90;
+        const score = sameRow ? horizontalGap : above ? verticalGap + 40 : Number.POSITIVE_INFINITY;
+        return { text, score };
+      })
+      .filter((item) => item.text && item.text.length <= 100 && Number.isFinite(item.score) && item.score < 220)
+      .sort((left, right) => left.score - right.score);
+    const result = nearby[0]?.text || "";
+    state.nearbyLabelCache.set(element, result);
+    return result;
+  }
+
+  function collectFieldEvidence(element) {
+    const data = [...(element.attributes || [])]
+      .filter((attribute) => /^data-(?:label|field|name|testid|placeholder|caption|title)$/i.test(attribute.name))
+      .map((attribute) => `${attribute.name} ${attribute.value}`).join(" ");
+    const text = [
+      element.getAttribute("title"),
+      referencedText(element, "aria-describedby"),
+      element.getAttribute("data-label"),
+      element.getAttribute("data-field"),
+      element.getAttribute("data-name"),
+      data,
+      findNearbyLabelText(element)
+    ].map(compactText).filter(Boolean).join(" | ");
+    return compactText(text);
+  }
+
+  function isGenericFieldText(text) {
+    return /^(?:请)?(?:输入|填写|选择|搜索|请选择|请填写|请输入|请搜索|未命名字段|select|enter|input)$/i.test(compactText(text));
+  }
+
   function findFieldLabel(element) {
     const direct = findDirectLabel(element);
-    if (direct) return direct;
-    const ariaLabelledBy = element.getAttribute("aria-labelledby");
-    if (ariaLabelledBy) {
-      const text = ariaLabelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent || "").join(" ");
-      if (compactText(text)) return compactText(text);
-    }
+    if (direct && !isGenericFieldText(direct)) return direct;
+    const labelledText = referencedText(element, "aria-labelledby");
+    if (labelledText && !isGenericFieldText(labelledText)) return labelledText;
     const aria = compactText(element.getAttribute("aria-label"));
-    if (aria) return aria;
+    if (aria && !isGenericFieldText(aria)) return aria;
 
     let current = element.parentElement;
     for (let depth = 0; current && depth < 6; depth += 1, current = current.parentElement) {
@@ -371,19 +524,27 @@
         ":scope > .ant-form-item-label",
         ":scope > * > .ant-form-item-label",
         ":scope > [class*='form-label']",
-        ":scope > [class*='field-label']"
+        ":scope > [class*='field-label']",
+        ":scope > [class*='control-label']",
+        ":scope > legend",
+        ":scope > dt",
+        ":scope > th"
       ];
       for (const selector of selectors) {
         let candidate = null;
         try { candidate = current.querySelector(selector); } catch (_) {}
         const text = compactText(candidate?.textContent);
-        if (text && text.length <= 120) return text;
+        if (text && text.length <= 120 && !isGenericFieldText(text)) return text;
       }
-      const previous = element.previousElementSibling;
+      const previous = current.previousElementSibling || (depth === 0 ? element.previousElementSibling : null);
       const previousText = compactText(previous?.textContent);
-      if (previousText && previousText.length <= 80) return previousText;
+      if (previousText && previousText.length <= 80 && !isGenericFieldText(previousText)) return previousText;
     }
-    return compactText(element.getAttribute("placeholder") || element.getAttribute("name") || element.id);
+    const described = referencedText(element, "aria-describedby");
+    if (described && !isGenericFieldText(described)) return described;
+    const nearby = findNearbyLabelText(element);
+    if (nearby && !isGenericFieldText(nearby)) return nearby;
+    return compactText([element.getAttribute("placeholder"), element.getAttribute("name"), element.id].find((value) => value && !isGenericFieldText(value)) || "");
   }
 
   function findSection(element) {
@@ -445,9 +606,18 @@
     if (element.tagName === "SELECT") return false;
     if (isFrameworkSelectWrapper(element)) return true;
     if (element.getAttribute("role") === "combobox") return true;
-    if (!(element instanceof HTMLInputElement) || !element.readOnly) return false;
-    const ancestor = element.closest("[class*='select'], [role='combobox']");
-    return Boolean(ancestor);
+    if (!(element instanceof HTMLInputElement)) return false;
+    const ancestor = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, [class*='select'], [role='combobox'], [aria-haspopup='listbox']");
+    const context = compactText(`${element.getAttribute("placeholder") || ""} ${element.getAttribute("aria-label") || ""} ${element.name || ""} ${element.id || ""}`).toLowerCase();
+    const semanticAutocomplete = /(?:搜索.*(?:职位|岗位)|(?:职位|岗位)关键词|job.*keyword|position.*keyword)/i.test(context);
+    return Boolean(
+      element.getAttribute("aria-autocomplete")
+      || element.getAttribute("aria-controls")
+      || element.getAttribute("aria-owns")
+      || element.getAttribute("list")
+      || ancestor && (element.readOnly || ancestor.getAttribute("aria-haspopup") === "listbox" || /select|autocomplete|suggest/i.test(ancestor.className))
+      || semanticAutocomplete
+    );
   }
 
   function isFrameworkSelectWrapper(element) {
@@ -467,7 +637,7 @@
     if (element.isContentEditable) return compactText(element.textContent);
     if (isFrameworkSelectWrapper(element) || element.getAttribute("role") === "combobox") {
       const selected = element.querySelector(".ant-select-selection-item, .el-select__selected-item, .arco-select-view-value, .semi-select-selection-text, .ivu-select-selected-value, [data-value]:not(input)");
-      const value = compactText(selected?.getAttribute("data-value") || selected?.textContent || element.getAttribute("data-value") || "");
+      const value = compactText(selected?.getAttribute("data-value") || selected?.textContent || element.getAttribute("data-value") || element.value || "");
       return /^(?:请选择|select)$/i.test(value) ? "" : value;
     }
     return compactText(element.value || element.getAttribute("data-value") || "");
@@ -511,13 +681,13 @@
   }
 
   function readTargetValue(target) {
-    if (target.kind === "radio") return target.elements.find((element) => element.checked)?.value || "";
+    if (target.kind === "choice-group") return choiceValue(target.elements.find(isChoiceChecked));
     return readCurrentValue(target.element);
   }
 
   async function fillTarget(target, value) {
     if (!value) return { ok: false, message: "资料值为空" };
-    if (target.kind === "radio") return fillRadio(target.elements, value);
+    if (target.kind === "choice-group") return fillChoiceGroup(target.elements, value);
     if (target.kind === "custom-select") return fillCustomSelect(target.element, value);
     if (target.element instanceof HTMLSelectElement) return fillNativeSelect(target.element, value);
     if (target.element instanceof HTMLInputElement && target.element.type === "checkbox") return fillCheckbox(target.element, value);
@@ -574,16 +744,21 @@
     return { ok: true, message: `已选择“${compactText(option.textContent)}”` };
   }
 
-  function fillRadio(elements, value) {
-    const option = chooseOption(elements, value, (element) => `${findDirectLabel(element)}|${element.value}`);
+  function fillChoiceGroup(elements, value) {
+    const option = chooseOption(elements, value, (element) => `${choiceLabel(element)}|${choiceValue(element)}`);
     if (!option) return { ok: false, message: "单选项中没有唯一匹配项，请手动选择" };
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "checked")?.set;
-    if (setter) setter.call(option, true);
-    else option.checked = true;
-    option.dispatchEvent(new Event("input", { bubbles: true }));
-    option.dispatchEvent(new Event("change", { bubbles: true }));
-    flashElement(option);
-    return { ok: true, message: `已选择“${findDirectLabel(option) || option.value}”` };
+    const input = option instanceof HTMLInputElement ? option : option.querySelector?.("input[type='radio']");
+    const activationTarget = option.closest?.("label, .ant-radio-wrapper, .el-radio, .arco-radio, .semi-radio, .ivu-radio-wrapper") || option;
+    if (input) {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "checked")?.set;
+      if (setter) setter.call(input, true);
+      else input.checked = true;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    activationTarget.click();
+    flashElement(activationTarget);
+    return { ok: isChoiceChecked(option) || Boolean(input?.checked), message: `已选择“${choiceLabel(option) || choiceValue(option)}”` };
   }
 
   function fillCheckbox(element, value) {
@@ -598,50 +773,147 @@
   }
 
   async function fillCustomSelect(element, value) {
-    element.scrollIntoView({ block: "center", inline: "nearest" });
-    element.focus({ preventScroll: true });
-    element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
-    element.click();
-    await wait(180);
-    const selectors = [
-      "[role='listbox'] [role='option']",
-      ".el-select-dropdown__item:not(.is-disabled)",
-      ".ant-select-item-option:not(.ant-select-item-option-disabled)",
-      ".arco-select-option:not(.arco-select-option-disabled)",
-      ".semi-select-option-list [role='option']",
-      ".ivu-select-item"
-    ].join(",");
-    const options = [...document.querySelectorAll(selectors)].filter(isVisibleOption);
-    const option = chooseOption(options, value, (item) => `${item.textContent || ""}|${item.getAttribute("title") || ""}|${item.getAttribute("data-value") || ""}`);
+    const wrapper = element.closest?.(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, [class*='select'], [role='combobox'], [aria-haspopup='listbox']") || element;
+    const input = element instanceof HTMLInputElement ? element : wrapper.querySelector?.("input:not([type='hidden']), [role='combobox']");
+    const activationTarget = input || element;
+    wrapper.scrollIntoView({ block: "center", inline: "nearest" });
+    activationTarget.focus({ preventScroll: true });
+    activationTarget.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
+    activationTarget.click();
+
+    const editable = input instanceof HTMLInputElement && !input.readOnly && input.getAttribute("aria-readonly") !== "true";
+    const originalValue = editable ? input.value : "";
+    if (editable) {
+      setNativeInputValue(input, value);
+      dispatchTypingEvents(input, value);
+    }
+
+    let options = await waitForSelectOptions(wrapper, 1800);
+    let option = chooseOption(options, value, optionSearchText);
+    if (!option && editable) {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", code: "ArrowDown", bubbles: true, cancelable: true }));
+      options = await waitForSelectOptions(wrapper, 700);
+      option = chooseOption(options, value, optionSearchText);
+    }
     if (!option) {
-      element.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      return { ok: false, message: "自定义下拉框没有唯一匹配项，请手动选择" };
+      activationTarget.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true }));
+      if (editable) {
+        setNativeInputValue(input, originalValue);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return { ok: false, message: editable ? "已输入关键词，但未找到唯一候选项，请检查网页联想结果" : "自定义下拉框没有唯一匹配项，请手动选择" };
     }
     option.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
     option.click();
-    await wait(120);
-    flashElement(element);
-    return { ok: true, message: `已选择“${compactText(option.textContent)}”` };
+    await wait(180);
+    if (editable && wrapper.getAttribute("aria-expanded") === "true") {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+      await wait(100);
+    }
+    flashElement(wrapper);
+    return { ok: true, message: `已选择并确认“${compactText(option.textContent)}”` };
+  }
+
+  function setNativeInputValue(element, value) {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    if (setter) setter.call(element, value);
+    else element.value = value;
+  }
+
+  function dispatchTypingEvents(element, value) {
+    try {
+      element.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType: "insertText", data: value }));
+      element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
+    } catch (_) {
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    element.dispatchEvent(new KeyboardEvent("keyup", { key: value.slice(-1), bubbles: true }));
+  }
+
+  function optionSearchText(item) {
+    return `${item.textContent || ""}|${item.getAttribute("aria-label") || ""}|${item.getAttribute("title") || ""}|${item.getAttribute("data-value") || ""}|${item.getAttribute("value") || ""}`;
+  }
+
+  function findSelectOptions(wrapper) {
+    const selectors = [
+      "[role='listbox'] [role='option']", "[role='option']",
+      ".el-select-dropdown__item:not(.is-disabled)",
+      ".ant-select-item-option:not(.ant-select-item-option-disabled)",
+      ".arco-select-option:not(.arco-select-option-disabled)",
+      ".semi-select-option-list [role='option']", ".semi-select-option",
+      ".ivu-select-item", ".rc-virtual-list-holder-inner > *"
+    ].join(",");
+    const controlledIds = [wrapper, ...wrapper.querySelectorAll?.("[aria-controls], [aria-owns]") || []]
+      .flatMap((node) => `${node.getAttribute?.("aria-controls") || ""} ${node.getAttribute?.("aria-owns") || ""}`.trim().split(/\s+/)).filter(Boolean);
+    const controlledRoots = controlledIds.map((id) => document.getElementById(id)).filter(Boolean);
+    const collectFrom = (roots) => {
+      const found = new Set();
+      for (const root of roots) for (const option of root.querySelectorAll(selectors)) {
+        if (isVisibleOption(option) && option.getAttribute("aria-disabled") !== "true") found.add(option);
+      }
+      return [...found];
+    };
+    const controlled = collectFrom(controlledRoots);
+    if (controlled.length) return controlled;
+    const found = new Set();
+    for (const option of document.querySelectorAll(selectors)) {
+      if (isVisibleOption(option) && option.getAttribute("aria-disabled") !== "true") found.add(option);
+    }
+    return [...found];
+  }
+
+  async function waitForSelectOptions(wrapper, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    let options = [];
+    do {
+      options = findSelectOptions(wrapper);
+      if (options.length) return options;
+      await wait(90);
+    } while (Date.now() < deadline);
+    return options;
   }
 
   function chooseOption(options, desiredValue, textGetter) {
     const desired = normalizeChoice(desiredValue);
     if (!desired) return null;
     const scored = options.map((option) => {
-      const text = normalizeChoice(textGetter(option));
+      const parts = String(textGetter(option) || "").split("|").map(normalizeChoice).filter(Boolean);
       let score = 0;
-      if (text === desired) score = 3;
-      else if (text.split("|").some((part) => part === desired)) score = 2.8;
-      else if (text.includes(desired) || desired.includes(text.replace(/\|/g, ""))) score = 2;
+      for (const part of parts) {
+        if (part === desired) score = Math.max(score, 100);
+        else if (choiceSynonym(part) && choiceSynonym(part) === choiceSynonym(desired)) score = Math.max(score, 96);
+        else if (Math.min(part.length, desired.length) >= 2 && (part.includes(desired) || desired.includes(part))) score = Math.max(score, 82);
+        else score = Math.max(score, Math.round(choiceSimilarity(part, desired) * 75));
+      }
       return { option, score };
-    }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score);
+    }).filter((item) => item.score >= 68).sort((a, b) => b.score - a.score);
     if (!scored.length) return null;
-    if (scored[1] && scored[0].score === scored[1].score) return null;
+    if (scored[1] && scored[0].score - scored[1].score < 8) return null;
     return scored[0].option;
   }
 
   function normalizeChoice(value) {
     return String(value || "").toLowerCase().replace(/请选择|select|\s|[：:，,。\.、/\\()（）\[\]【】]/g, "");
+  }
+
+  function choiceSynonym(value) {
+    const normalized = normalizeChoice(value);
+    const groups = [
+      ["男", "男性", "male", "man", "m"], ["女", "女性", "female", "woman", "f"],
+      ["是", "有", "同意", "已同意", "yes", "true", "1"], ["否", "无", "不同意", "no", "false", "0"],
+      ["全日制", "fulltime", "full-time"], ["非全日制", "parttime", "part-time"]
+    ];
+    const group = groups.find((items) => items.map(normalizeChoice).includes(normalized));
+    return group ? normalizeChoice(group[0]) : "";
+  }
+
+  function choiceSimilarity(left, right) {
+    const a = [...new Set([...left])];
+    const b = [...new Set([...right])];
+    if (!a.length || !b.length) return 0;
+    const common = a.filter((token) => b.includes(token)).length;
+    return 2 * common / (a.length + b.length);
   }
 
   function isVisibleOption(element) {

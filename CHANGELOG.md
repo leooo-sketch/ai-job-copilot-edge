@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-09-02
+
+### Added
+
+- Multi-signal field recognition using explicit labels, ARIA references and descriptions, safe semantic `data-*` attributes, nearby label text, placeholders, names, IDs, classes, and standard autocomplete metadata
+- Conservative Unicode bigram matching for slightly misspelled or fuzzy Chinese field labels; uncertain matches remain review-only
+- Native radio groups without `name`, ARIA radio groups, and common Ant Design, Element, Arco, Semi, and iView radio wrappers
+- Editable combobox and autocomplete support that types the desired value, waits for asynchronous suggestions, selects a unique candidate, and confirms it with the standard WAI-ARIA keyboard flow when needed
+- A browser regression fixture covering asynchronous position suggestions, gender choices, fuzzy labels, and two independent project cards
+
+### Fixed
+
+- Position keywords are now selected from the suggestion list instead of being left as unconfirmed text
+- Choice fields such as gender can now select `男 / 女` and common equivalent values rather than attempting to type into a non-text control
+- Repeatable education, work, internship, and project fields are grouped by their actual DOM card before mapping, preventing one experience from spilling into several cards
+- Repeat-field preview labels now identify both the record number and source record, for example `项目经历 2「独立站自动运营」 · 项目角色`
+- Generic placeholders such as `请输入` and `未命名字段` no longer hide a reliable nearby label
+- Failed autocomplete attempts restore the original value rather than leaving an unconfirmed partial entry
+
+### Verification
+
+- Twenty-one automated regression and safety tests pass
+- Browser regression filled six fields with zero skips and zero failures; position suggestion confirmation, gender selection, and second-project alignment all passed
+
 ## [0.4.1] - 2026-08-29
 
 ### Fixed

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>职舟高级控件回归页</title>
+    <style>
+      body { max-width: 860px; margin: 30px auto; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #29253b; background: #f5f7fb; }
+      section, .record-card { margin: 16px 0; padding: 20px; border: 1px solid #ddd9f4; border-radius: 14px; background: #fff; }
+      .field { display: grid; gap: 6px; margin: 12px 0; }
+      input { min-height: 40px; padding: 0 10px; border: 1px solid #cfc9e8; border-radius: 8px; }
+      [role="radio"], [role="option"] { padding: 8px 12px; cursor: pointer; }
+      [role="radio"][aria-checked="true"], [role="option"]:hover { color: #fff; background: #6654e8; }
+      [role="listbox"] { position: absolute; z-index: 3; min-width: 280px; padding: 6px; border: 1px solid #d8d3ef; border-radius: 8px; background: #fff; box-shadow: 0 12px 28px #31286520; }
+      button { margin-right: 8px; padding: 10px 16px; border: 0; border-radius: 8px; color: #fff; background: #6654e8; }
+      pre { min-height: 90px; padding: 14px; color: #dff8ec; background: #28243c; border-radius: 10px; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h1>高级网申控件回归页</h1>
+
+    <section>
+      <h2>求职意向</h2>
+      <div class="field">
+        <label id="jobKeywordLabel" for="jobKeyword">搜索职位关键词</label>
+        <input id="jobKeyword" role="combobox" aria-autocomplete="list" aria-controls="jobOptions" aria-expanded="false" placeholder="请输入">
+        <div id="jobOptions" role="listbox" hidden></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>个人信息</h2>
+      <div class="field" role="radiogroup" aria-labelledby="genderLabel">
+        <span id="genderLabel" class="field-label">性别</span>
+        <span role="radio" tabindex="0" aria-checked="false" data-value="male">男</span>
+        <span role="radio" tabindex="0" aria-checked="false" data-value="female">女</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>项目经历</h2>
+      <div class="record-card">
+        <div class="field"><label>项目名称 <input value="职舟 AI 求职智能体"></label></div>
+        <div class="field"><span class="field-label">项目角色</span><input placeholder="请输入"></div>
+        <div class="field"><span class="field-label">项目职责</span><input placeholder="请输入"></div>
+      </div>
+      <div class="record-card">
+        <div class="field"><label>项目名称 <input value="独立站自动运营"></label></div>
+        <div class="field"><span class="field-label">项目角式</span><input placeholder="请输入"></div>
+        <div class="field"><span class="field-label">项目职责</span><input placeholder="请输入"></div>
+      </div>
+    </section>
+
+    <button id="scan" type="button">扫描</button>
+    <button id="fill" type="button">填充（含敏感字段测试）</button>
+    <pre id="result">尚未运行</pre>
+
+    <script>
+      window.chrome = { runtime: { onMessage: { addListener(listener) { window.__autofillMessageListener = listener; } } } };
+      const keyword = document.getElementById("jobKeyword");
+      const options = document.getElementById("jobOptions");
+      let suggestionTimer = 0;
+      keyword.addEventListener("input", () => {
+        clearTimeout(suggestionTimer);
+        suggestionTimer = setTimeout(() => {
+          options.replaceChildren();
+          ["AI 产品负责人", "AI 产品经理", "产品实习生"].forEach((text) => {
+            const option = document.createElement("div");
+            option.setAttribute("role", "option");
+            option.dataset.value = text;
+            option.textContent = text;
+            option.addEventListener("click", () => {
+              keyword.value = text;
+              keyword.dataset.selected = "true";
+              keyword.setAttribute("aria-expanded", "false");
+              options.hidden = true;
+            });
+            options.append(option);
+          });
+          options.hidden = false;
+          keyword.setAttribute("aria-expanded", "true");
+        }, 260);
+      });
+      document.querySelectorAll("[role='radio']").forEach((radio) => radio.addEventListener("click", () => {
+        document.querySelectorAll("[role='radio']").forEach((item) => item.setAttribute("aria-checked", "false"));
+        radio.setAttribute("aria-checked", "true");
+      }));
+    </script>
+    <script src="../../autofill-core.js"></script>
+    <script src="../../autofill-content.js?v=3"></script>
+    <script>
+      const profile = JobAutofillCore.sanitizeProfile({
+        jobPreferences: { expectedRole: "AI 产品负责人" },
+        private: { gender: "女" },
+        projects: [
+          { name: "职舟 AI 求职智能体", role: "产品负责人", responsibilities: "设计可靠网申流程" },
+          { name: "独立站自动运营", role: "项目负责人", responsibilities: "自动选品与上品" }
+        ]
+      });
+      let plan = [];
+      const send = (message) => new Promise((resolve) => window.__autofillMessageListener(message, {}, resolve));
+      document.getElementById("scan").addEventListener("click", async () => {
+        const scan = await send({ type: "AUTOFILL_SCAN_FORM" });
+        plan = JobAutofillCore.buildFillPlan(profile, scan.fields);
+        document.getElementById("result").textContent = JSON.stringify(plan.map(({ label, canonicalLabel, value, status }) => ({ label, canonicalLabel, value, status })), null, 2);
+      });
+      document.getElementById("fill").addEventListener("click", async () => {
+        if (!plan.length) document.getElementById("scan").click();
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        const entries = plan.filter((item) => item.selected || item.canonicalKey === "private.gender" || item.canonicalKey === "projects.1.role").map((item) => ({ fieldId: item.fieldId, value: item.value }));
+        const response = await send({ type: "AUTOFILL_APPLY_PLAN", entries });
+        document.getElementById("result").textContent = JSON.stringify({
+          ...response.result,
+          checks: {
+            keywordConfirmed: keyword.dataset.selected === "true" && keyword.value === "AI 产品负责人",
+            genderSelected: document.querySelector("[data-value='female']").getAttribute("aria-checked") === "true",
+            secondProjectMapped: [...document.querySelectorAll(".record-card")][1].querySelectorAll("input")[1].value === "项目负责人"
+          }
+        }, null, 2);
+      });
+    </script>
+  </body>
+</html>

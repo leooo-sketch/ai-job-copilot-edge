@@ -333,3 +333,46 @@ test("autofill implementation cannot submit forms or overwrite existing values b
   assert.match(panel, /扩展不会提交表单/);
   assert.match(panel, /item\.sensitive/);
 });
+
+test("nearby semantic evidence resolves generic placeholders and position keywords", () => {
+  const profile = autofillCore.sanitizeProfile({ jobPreferences: { expectedRole: "AI 产品负责人" } });
+  const [item] = autofillCore.buildFillPlan(profile, [{
+    fieldId: "role-keyword", label: "", placeholder: "请输入", description: "搜索职位关键词",
+    section: "求职意向", tag: "input", type: "text", currentValue: "", required: true, options: []
+  }]);
+  assert.equal(item.canonicalKey, "jobPreferences.expectedRole");
+  assert.equal(item.value, "AI 产品负责人");
+  assert.equal(item.status, "ready");
+  assert.equal(item.selected, true);
+});
+
+test("fuzzy project labels stay review-only and clearly name the second record", () => {
+  const profile = autofillCore.sanitizeProfile({
+    projects: [
+      { name: "职舟 AI 求职智能体", role: "产品负责人" },
+      { name: "独立站自动运营", role: "项目负责人" }
+    ]
+  });
+  const [item] = autofillCore.buildFillPlan(profile, [{
+    fieldId: "project-role", label: "项目角式", placeholder: "请输入", section: "项目经历",
+    tag: "input", type: "text", currentValue: "", required: true, options: [],
+    repeatKind: "projects", repeatIndex: 1, repeatGroupId: "projects:1"
+  }]);
+  assert.equal(item.canonicalKey, "projects.1.role");
+  assert.equal(item.value, "项目负责人");
+  assert.equal(item.status, "review");
+  assert.match(item.reason, /模糊匹配/);
+  assert.equal(item.canonicalLabel, "项目经历 2「独立站自动运营」 · 项目角色");
+});
+
+test("content agent supports framework choices and asynchronous combobox confirmation", () => {
+  const content = fs.readFileSync(path.join(root, "autofill-content.js"), "utf8");
+  assert.match(content, /\[role='radio'\]/);
+  assert.match(content, /collectChoiceGroup/);
+  assert.match(content, /choiceSynonym/);
+  assert.match(content, /waitForSelectOptions\(wrapper, 1800\)/);
+  assert.match(content, /key: "ArrowDown"/);
+  assert.match(content, /key: "Enter"/);
+  assert.match(content, /setNativeInputValue\(input, originalValue\)/);
+  assert.match(content, /findRepeatCardContainer/);
+});

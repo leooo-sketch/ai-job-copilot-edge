@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "职舟 AI 求职智能体",
-  "version": "0.4.1",
-  "description": "拆分多段简历经历，识别自定义下拉和日期控件，并按网页现有学校/公司/项目精确对齐后可靠填充。",
+  "version": "0.5.0",
+  "description": "可靠识别模糊字段、重复经历卡片、职位联想下拉与单选控件，先预览确认，再准确填充。",
   "permissions": [
     "sidePanel",
     "storage",
