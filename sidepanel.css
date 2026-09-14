@@ -460,3 +460,7 @@ input:focus, select:focus, textarea:focus { border-color: #9d90f0; box-shadow: 0
   .two-columns, .record-field-grid { grid-template-columns: 1fr; }
   .record-wide-field { grid-column: auto; }
 }
+/* Field correction remains inside the local profile review panel. */
+.profile-source-picker { margin-top: 10px; color: #6251d8; font-size: 12px; }
+.profile-source-picker summary { cursor: pointer; }
+.profile-source-picker select { width: 100%; max-width: 100%; margin-top: 8px; padding: 8px; border: 1px solid #d8d2f2; border-radius: 8px; color: #242136; background: #fff; }

@@ -370,7 +370,7 @@ test("content agent supports framework choices and asynchronous combobox confirm
   assert.match(content, /\[role='radio'\]/);
   assert.match(content, /collectChoiceGroup/);
   assert.match(content, /choiceSynonym/);
-  assert.match(content, /waitForSelectOptions\(wrapper, 1800\)/);
+  assert.match(content, /waitForSelectOptions\(wrapper, 1800[,)]/);
   assert.match(content, /key: "ArrowDown"/);
   assert.match(content, /key: "Enter"/);
   assert.match(content, /setNativeInputValue\(input, originalValue\)/);

@@ -1,6 +1,6 @@
 {
   "name": "ai-job-copilot-edge",
-  "version": "0.5.0",
+  "version": "0.6.1",
   "private": true,
   "description": "Edge Manifest V3 AI job application copilot",
   "scripts": {
@@ -11,6 +11,7 @@
     "node": ">=18"
   },
   "devDependencies": {
+    "jsdom": "^26.1.0",
     "mammoth": "1.12.2",
     "pdfjs-dist": "4.8.69"
   }

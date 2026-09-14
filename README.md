@@ -10,7 +10,7 @@
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-6654e8)
 ![Microsoft Edge](https://img.shields.io/badge/Microsoft%20Edge-Side%20Panel-0b84ff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2fa978.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-21%20passing-2fa978)](#development)
+[![Tests](https://img.shields.io/badge/tests-32%20passing-2fa978)](#development)
 
 [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md)
 
@@ -32,7 +32,9 @@ No hosted backend. No CAPTCHA bypass. No hidden application decisions.
 
 | Release | Classification | What it represents |
 |---|---|---|
-| `v0.5.0` | Latest enhanced release | Fuzzy field recognition, DOM-based repeat-card grouping, confirmed async job suggestions, and native/ARIA/framework choice controls |
+| `v0.6.1` | Latest version | Legacy dropdown compatibility, education synonyms and separate training/admission fields; [upgrade notes](docs/AUTOFILL-0.6.1.md) |
+| `v0.6.0` | Autofill improvements | Split dates, validation-label cleanup, verified selections, profile mapping corrections and award/certificate cards; [upgrade notes](docs/AUTOFILL-0.6.md) |
+| `v0.5.0` | Enhanced release | Fuzzy field recognition, DOM-based repeat-card grouping, confirmed async job suggestions, and native/ARIA/framework choice controls |
 | `v0.1.0` | Initial public release | Edge side panel, supported job-site adapters, AI matching, review queue, and guarded application actions |
 | `v0.4.1` | Reliable autofill release | Reliable application autofill, profile schema v3, local multi-resume parsing, Qwen review, dynamic repeat sections, and compatibility fixes |
 

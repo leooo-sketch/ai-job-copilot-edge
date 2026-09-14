@@ -438,8 +438,20 @@
             <legend>7. 技能 / 语言 / 证书 / 成果</legend>
             <label>技能（每行一项）<textarea id="profileSkillsInput" rows="4" placeholder="技能名 | 熟练度 | 年限 | 说明"></textarea></label>
             <label>语言（每行一项）<textarea id="profileLanguagesInput" rows="4" placeholder="语种 | 综合水平 | 读 | 写 | 说 | 听 | 考试 | 分数"></textarea></label>
-            <label>证书（每行一项）<textarea id="profileCertificatesInput" rows="4" placeholder="名称 | 发证机构 | 取得日期 | 到期日期 | 证书编号 | 验证链接"></textarea></label>
-            <label>奖励与荣誉（每行一项）<textarea id="profileAwardsInput" rows="4" placeholder="奖项 | 颁发方 | 日期 | 级别 | 说明"></textarea></label>
+            <section class="record-editor" aria-labelledby="certificateRecordsTitle">
+              <div class="record-editor-heading">
+                <h3 id="certificateRecordsTitle">证书</h3>
+                <button class="text-button record-add-button" type="button" data-add-record="certificates">＋ 添加证书</button>
+              </div>
+              <div id="profileCertificateRecords" class="record-list" data-record-list="certificates"></div>
+            </section>
+            <section class="record-editor" aria-labelledby="awardRecordsTitle">
+              <div class="record-editor-heading">
+                <h3 id="awardRecordsTitle">获奖经历</h3>
+                <button class="text-button record-add-button" type="button" data-add-record="awards">＋ 添加获奖经历</button>
+              </div>
+              <div id="profileAwardRecords" class="record-list" data-record-list="awards"></div>
+            </section>
             <label>论文与出版物（每行一项）<textarea id="profilePublicationsInput" rows="4" placeholder="标题 | 出版方 | 日期 | 作者 | 链接 | 摘要"></textarea></label>
             <label>专利（每行一项）<textarea id="profilePatentsInput" rows="4" placeholder="名称 | 编号 | 状态 | 日期 | 发明人 | 说明"></textarea></label>
           </fieldset>

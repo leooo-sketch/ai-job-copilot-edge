@@ -49,7 +49,7 @@
   });
 
   const RECORD_SCHEMAS = Object.freeze({
-    education: ["institution", "schoolType", "college", "area", "majorCategory", "minor", "researchDirection", "studyType", "degreeType", "educationLevel", "startDate", "endDate", "graduationDate", "score", "scoreScale", "rank", "rankTotal", "educationType", "studentType", "admissionBatch", "overseasStudy", "status", "country", "city", "courses", "thesis", "advisor", "honors", "summary"],
+    education: ["institution", "schoolType", "college", "area", "majorCategory", "minor", "researchDirection", "studyType", "degreeType", "educationLevel", "startDate", "endDate", "graduationDate", "score", "scoreScale", "rank", "rankTotal", "educationType", "studentType", "admissionBatch", "overseasStudy", "status", "country", "city", "courses", "thesis", "advisor", "honors", "summary", "trainingMode", "unifiedAdmission"],
     work: ["experienceType", "name", "department", "position", "employmentType", "jobFunction", "industry", "companyNature", "companySize", "startDate", "endDate", "current", "country", "city", "location", "teamSize", "directReports", "responsibilities", "achievements", "technologies", "leavingReason", "supervisorName", "supervisorTitle", "supervisorPhone", "salary", "salaryPeriod", "summary"],
     internships: ["experienceType", "name", "department", "position", "employmentType", "jobFunction", "industry", "companyNature", "companySize", "startDate", "endDate", "current", "country", "city", "location", "teamSize", "directReports", "responsibilities", "achievements", "technologies", "leavingReason", "supervisorName", "supervisorTitle", "supervisorPhone", "salary", "salaryPeriod", "summary"],
     projects: ["name", "type", "entity", "department", "role", "industry", "startDate", "endDate", "current", "country", "city", "location", "url", "keywords", "technologies", "methods", "teamSize", "customers", "background", "objective", "responsibilities", "deliverables", "achievements", "metrics", "challenges", "solution", "summary"],
@@ -120,7 +120,7 @@
     rule("jobPreferences.acceptPartTime", "接受兼职", ["是否接受兼职", "接受兼职", "part time"]),
     rule("jobPreferences.acceptTemporary", "接受临时岗位", ["是否接受临时岗位", "临时派遣", "temporary assignment"]),
     rule("jobPreferences.flexibleWork", "弹性工作", ["是否接受弹性工作", "弹性办公", "flexible work"]),
-    rule("jobPreferences.source", "申请来源", ["信息来源", "申请来源", "如何得知", "candidate source", "source"]),
+    rule("jobPreferences.source", "申请来源", ["获取招聘信息来源", "招聘信息来源", "信息来源", "申请来源", "如何得知", "candidate source", "source"]),
     rule("jobPreferences.referrerName", "内推人", ["内推人姓名", "推荐人姓名", "referrer name"]),
     rule("jobPreferences.referrerEmployeeId", "内推人工号", ["内推人工号", "推荐人员工号", "referrer employee id"]),
 
@@ -159,19 +159,21 @@
     collectionRule("education.$.schoolType", "学校类型", ["学校类型", "院校类型", "院校类别", "school type"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.college", "院系", ["学院", "院系", "系别", "faculty", "school department"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.area", "专业", ["专业", "专业名称", "所学专业", "主修专业", "major", "field of study"], "education", { sections: ["教育信息", "教育经历", "教育背景", "education"], excludes: ["技能", "课程", "类别", "排名"] }),
-    collectionRule("education.$.majorCategory", "专业类别", ["专业类别", "学科门类", "专业大类", "major category"], "education", { sections: ["教育信息", "教育经历", "education"] }),
+    collectionRule("education.$.majorCategory", "专业类别", ["学科", "专业类别", "学科门类", "专业大类", "major category"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.minor", "辅修专业", ["辅修专业", "第二专业", "minor"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.researchDirection", "研究方向", ["研究方向", "研究领域", "专业方向", "research direction", "research area"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.studyType", "学位", ["学位", "degree"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["类型", "类别"] }),
     collectionRule("education.$.degreeType", "学位类型", ["学位类型", "学位类别", "授予学位", "degree type"], "education", { sections: ["教育信息", "教育经历", "education"] }),
-    collectionRule("education.$.educationLevel", "学历", ["最高学历", "学历", "education level"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["性质"] }),
+    collectionRule("education.$.educationLevel", "学历", ["最高学历", "学历", "education level"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["性质", "学习形式"] }),
     collectionRule("education.$.startDate", "入学时间", ["入学时间", "教育开始时间", "就读开始", "start date"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["工作", "项目"] }),
-    collectionRule("education.$.endDate", "毕业时间", ["毕业时间", "教育结束时间", "预计毕业时间", "graduation date", "graduation year", "end date"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["工作", "项目"] }),
+    collectionRule("education.$.endDate", "毕业时间", ["毕业届次", "毕业时间", "教育结束时间", "预计毕业时间", "graduation date", "graduation year", "end date"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["工作", "项目"] }),
     collectionRule("education.$.score", "GPA/成绩", ["平均绩点", "绩点", "gpa", "平均成绩", "综合成绩"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.scoreScale", "成绩满分", ["绩点满分", "成绩满分", "gpa scale"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.rank", "排名", ["专业排名", "班级排名", "年级排名", "院系排名", "成绩排名", "成绩院系中排名", "成绩在院系中排名", "rank"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.rankTotal", "排名总人数", ["专业总人数", "年级总人数", "排名总人数", "rank total"], "education", { sections: ["教育信息", "教育经历", "education"] }),
-    collectionRule("education.$.educationType", "受教育类型", ["受教育类型", "学历性质", "学习形式", "培养方式", "教育类型", "education type"], "education", { sections: ["教育信息", "教育经历", "education"] }),
+    collectionRule("education.$.educationType", "受教育类型", ["最高学历学习形式", "受教育类型", "学历性质", "学习形式", "教育类型", "education type"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["培养"] }),
+    collectionRule("education.$.trainingMode", "培养方式", ["培养方式", "定向培养", "培养类别"], "education", { sections: ["教育信息", "教育经历", "education"] }),
+    collectionRule("education.$.unifiedAdmission", "是否统招", ["是否统招", "统招"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.studentType", "学生类型", ["学生类型", "生源类型", "student type"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.admissionBatch", "录取批次", ["录取批次", "招生批次", "admission batch"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.overseasStudy", "海外学习经历", ["是否在海外学习", "是否有海外学习经历", "海外学习经历", "海外留学经历", "studied abroad", "overseas study"], "education", { sections: ["教育信息", "教育经历", "education"] }),
@@ -198,7 +200,7 @@
     collectionRule("work.$.city", "工作城市", ["工作地点", "工作城市", "所在城市", "work location"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["期望", "现居", "实习"] }),
     collectionRule("work.$.teamSize", "团队规模", ["团队规模", "团队人数", "team size"], "work", { sections: ["工作经历", "工作经验", "work"] }),
     collectionRule("work.$.directReports", "下属人数", ["下属人数", "管理人数", "direct reports"], "work", { sections: ["工作经历", "工作经验", "work"] }),
-    collectionRule("work.$.responsibilities", "工作职责", ["工作内容", "工作描述", "岗位职责", "主要职责", "职责描述", "description", "responsibilities"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["实习", "项目"] }),
+    collectionRule("work.$.responsibilities", "工作职责", ["工作职责", "工作内容", "工作描述", "岗位职责", "主要职责", "职责描述", "description", "responsibilities"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["实习", "项目"] }),
     collectionRule("work.$.achievements", "工作成果", ["工作成果", "主要业绩", "关键成果", "工作业绩", "achievements"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["实习", "项目"] }),
     collectionRule("work.$.technologies", "工作技能/工具", ["使用工具", "工作技能", "技术栈", "technologies"], "work", { sections: ["工作经历", "工作经验", "work"] }),
     collectionRule("work.$.leavingReason", "离职原因", ["离职原因", "离任原因", "reason for leaving"], "work", { sections: ["工作经历", "工作经验", "work"] }),
@@ -210,7 +212,7 @@
     rule("internships", "实习经历（整段）", ["实习经历", "实习经验", "internship experience", "internship history"], { types: ["textarea"] }),
     collectionRule("internships.$.name", "实习单位", ["实习单位", "实习公司", "工作单位", "单位名称", "公司名称", "internship company", "employer"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["目标公司", "亲属"] }),
     collectionRule("internships.$.department", "实习部门", ["实习部门", "所在部门", "部门名称", "department"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
-    collectionRule("internships.$.position", "实习职位", ["实习职位", "实习岗位", "职位", "职务", "岗位名称", "internship title", "position"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["期望", "项目"] }),
+    collectionRule("internships.$.position", "实习职位", ["实习职位", "实习岗位", "职位名称", "职位", "职务", "岗位名称", "internship title", "position"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["期望", "项目"] }),
     collectionRule("internships.$.employmentType", "实习性质", ["实习性质", "实习类型", "全职实习", "兼职实习", "employment type"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
     collectionRule("internships.$.jobFunction", "实习职能", ["实习职能", "岗位职能", "职能", "job function"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
     collectionRule("internships.$.industry", "实习行业", ["公司行业", "实习行业", "所在行业", "行业", "industry"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
@@ -221,7 +223,7 @@
     collectionRule("internships.$.current", "是否仍在实习", ["是否仍在实习", "是否在职", "至今", "current internship"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
     collectionRule("internships.$.city", "实习城市", ["实习地点", "实习城市", "工作地点", "所在城市", "internship location"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["期望", "现居"] }),
     collectionRule("internships.$.teamSize", "实习团队规模", ["团队规模", "团队人数", "team size"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
-    collectionRule("internships.$.responsibilities", "实习职责", ["实习内容", "实习描述", "实习职责", "岗位职责", "主要职责", "description", "responsibilities"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["项目"] }),
+    collectionRule("internships.$.responsibilities", "实习职责", ["工作职责", "工作内容", "实习内容", "实习描述", "实习职责", "岗位职责", "主要职责", "description", "responsibilities"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["项目"] }),
     collectionRule("internships.$.achievements", "实习成果", ["实习成果", "实习业绩", "主要成果", "achievements"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["项目"] }),
     collectionRule("internships.$.technologies", "实习技能/工具", ["使用工具", "实习技能", "技术栈", "technologies"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
     collectionRule("internships.$.supervisorName", "实习导师", ["实习导师", "直属上级", "主管姓名", "supervisor"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
@@ -271,6 +273,12 @@
     rule("certificates", "证书", ["资格证书", "技能证书", "证书", "certificates", "certifications"], { excludes: ["证件"] }),
     collectionRule("certificates.$.name", "证书名称", ["证书名称", "资格名称", "certificate name", "license name"], "certificates", { sections: ["证书", "资格", "certifications"] }),
     collectionRule("certificates.$.issuer", "发证机构", ["发证机构", "颁发机构", "issuer"], "certificates", { sections: ["证书", "资格", "certifications"] }),
+    collectionRule("certificates.$.date", "证书获得时间", ["获得时间", "获取时间", "取得时间", "发证日期", "证书日期", "issue date"], "certificates", { sections: ["证书", "资格", "certifications"] }),
+    collectionRule("certificates.$.expiryDate", "证书有效期", ["有效期", "到期时间", "expiry date"], "certificates", { sections: ["证书", "资格", "certifications"] }),
+    collectionRule("awards.$.title", "奖项名称", ["奖项名称", "奖项名", "奖励名称", "获奖名称", "award name", "award title"], "awards", { sections: ["获奖经历", "获奖情况", "奖励", "awards"] }),
+    collectionRule("awards.$.date", "获奖时间", ["获奖时间", "获奖日期", "获得时间", "award date"], "awards", { sections: ["获奖经历", "获奖情况", "奖励", "awards"] }),
+    collectionRule("awards.$.level", "获奖级别", ["获奖级别", "奖项级别", "奖励等级"], "awards", { sections: ["获奖经历", "奖励", "awards"] }),
+    collectionRule("awards.$.awarder", "颁奖单位", ["颁奖单位", "颁奖机构", "授奖单位"], "awards", { sections: ["获奖经历", "奖励", "awards"] }),
     rule("awards", "奖励活动", ["奖励活动", "获奖情况", "荣誉奖励", "奖项", "awards", "honors"]),
     rule("publications", "论文发表", ["论文发表", "出版物", "publications"]),
     rule("patents", "专利", ["专利", "patents"]),
@@ -372,6 +380,9 @@
   }
 
   function scoreRule(field, candidateRule) {
+    // A known record boundary is stronger evidence than a shared word such as “职责”.
+    if (field.repeatKind && candidateRule.collection && field.repeatKind !== candidateRule.collection) return null;
+    if (RECORD_SCHEMAS[candidateRule.path] && !candidateRule.collection && field.tag !== "textarea" && field.type !== "textarea") return null;
     const label = normalizeText(field.label);
     const placeholder = normalizeText(field.placeholder);
     const attributes = normalizeText(`${field.name || ""} ${field.id || ""} ${field.ariaLabel || ""} ${field.className || ""}`);
@@ -465,11 +476,32 @@
       crossCategory = Boolean(record);
     }
     const key = matchedRule.path.split(".").pop();
+    const summaryFallback = ["work", "internships"].includes(sourceCollection) && key === "responsibilities" && !cleanString(record?.[key]) && Boolean(cleanString(record?.summary));
+    const sourceKey = summaryFallback ? "summary" : key;
     return {
-      canonicalKey: matchedRule.path.replace(matchedRule.collection, sourceCollection).replace("$", String(occurrence)),
-      value: cleanString(record?.[key]),
-      crossCategory
+      canonicalKey: `${sourceCollection}.${occurrence}.${sourceKey}`,
+      value: cleanString(record?.[sourceKey]),
+      crossCategory, summaryFallback
     };
+  }
+
+  function datePartValue(value, part) {
+    if (!part) return cleanString(value);
+    const match = cleanString(value).match(/^(\d{4})(?:[年\-/.](\d{1,2}))?(?:[月\-/.](\d{1,2}))?/);
+    if (!match) return "";
+    if (part === "year") return match[1];
+    if (part === "month" && Number(match[2]) >= 1 && Number(match[2]) <= 12) return String(Number(match[2]));
+    if (part === "day" && Number(match[3]) >= 1 && Number(match[3]) <= 31) return String(Number(match[3]));
+    return "";
+  }
+
+  function highestEducationIndex(profile) {
+    const ranked = profile.education.map((record, index) => {
+      const text = `${record.educationLevel} ${record.studyType}`;
+      const rank = /博士|doctor|phd/i.test(text) ? 5 : /硕士|master/i.test(text) ? 4 : /本科|学士|bachelor/i.test(text) ? 3 : /大专|专科|associate/i.test(text) ? 2 : 1;
+      return { index, rank };
+    }).sort((a, b) => b.rank - a.rank);
+    return ranked[0]?.index || 0;
   }
 
   function buildRepeatSourceIndexMap(profile, fields) {
@@ -487,8 +519,9 @@
       if (!groups.has(groupKey)) groups.set(groupKey, { kind, repeatIndex, votes: new Map(), evidence: [] });
       const group = groups.get(groupKey);
       const primaryKey = RECORD_PRIMARY_KEYS[kind];
-      profile[kind].forEach((record, sourceIndex) => {
-        const actual = normalizeText(record?.[key]);
+      const records = kind === "internships" && !profile.internships.length && profile.automationPolicy.allowWorkAsInternship ? profile.work : profile[kind];
+      records.forEach((record, sourceIndex) => {
+        const actual = normalizeText(datePartValue(record?.[key], field.datePart));
         if (!actual) return;
         const exact = actual === desired;
         const contains = !exact && Math.min(actual.length, desired.length) >= 2 && (actual.includes(desired) || desired.includes(actual));
@@ -534,19 +567,21 @@
       const alignedRecord = repeatGroupKey ? repeatSourceIndices.get(repeatGroupKey) : null;
       const explicitOccurrence = alignedRecord ? alignedRecord.sourceIndex
         : repeatGroupKey ? Math.max(0, Number(field.repeatIndex)) : null;
-      const occurrence = match.rule.collection ? (explicitOccurrence ?? (occurrences[counterKey] || 0)) : 0;
+      const personalEducation = match.rule.collection === "education" && !field.repeatKind && /最高学历|毕业届次/.test(field.label || "");
+      const occurrence = personalEducation ? highestEducationIndex(profile) : match.rule.collection ? (explicitOccurrence ?? (occurrences[counterKey] || 0)) : 0;
       if (match.rule.collection) occurrences[counterKey] = occurrence + 1;
       const fieldContext = normalizeText(`${field.section || ""} ${field.label || ""}`);
       const resolved = resolvePlanValue(profile, match.rule, occurrence, fieldContext);
-      const value = resolved.value;
+      const value = datePartValue(resolved.value, field.datePart);
       const canonicalKey = resolved.canonicalKey;
       const crossWorkToInternship = resolved.crossCategory;
       const mapped = {
-        ...base, canonicalKey,
+        ...base, canonicalKey, datePart: field.datePart || "", sourceIndex: occurrence,
         canonicalLabel: match.rule.collection ? formatRepeatCanonicalLabel(profile, match.rule.collection, occurrence, match.rule.label) : match.rule.label,
         sensitive: Boolean(match.rule.sensitive || isSensitivePath(canonicalKey)), confidence: match.score, value,
         reason: crossWorkToInternship
           ? "跨栏目建议：网页为实习经历，但资料来源标记为工作经历，必须确认后填写"
+          : resolved.summaryFallback ? "职责栏暂无内容，复用同一条经历的概述，请核对适用性"
           : alignedRecord ? `${match.reason}；${alignedRecord.reason}`
             : match.ambiguous ? `${match.reason}，但与“${match.alternative}”接近` : match.reason,
         crossCategory: crossWorkToInternship
@@ -554,16 +589,48 @@
       if (base.currentValue) return { ...mapped, status: "existing", reason: "网页中已有内容，不会覆盖" };
       if (crossWorkToInternship && !profile.automationPolicy.allowWorkAsInternship) return { ...base, status: "unmapped", reason: "资料策略不允许把工作经历映射到实习栏目" };
       if (!value) return { ...mapped, status: "missing", reason: "已识别字段，但资料库中尚无对应内容" };
-      if (crossWorkToInternship || match.ambiguous || match.score < HIGH_CONFIDENCE || mapped.sensitive) return { ...mapped, status: "review", reason: mapped.sensitive ? `${mapped.reason}；敏感信息必须由你勾选确认` : `${mapped.reason}；请人工确认` };
+      if (crossWorkToInternship || resolved.summaryFallback || match.ambiguous || match.score < HIGH_CONFIDENCE || mapped.sensitive) return { ...mapped, status: "review", reason: mapped.sensitive ? `${mapped.reason}；敏感信息必须由你勾选确认` : `${mapped.reason}；请人工确认` };
       return { ...mapped, status: "ready", selected: true };
     });
   }
 
   function formatRepeatCanonicalLabel(profile, collection, occurrence, fieldLabel) {
-    const collectionLabel = ({ education: "教育经历", work: "工作经历", internships: "实习经历", projects: "项目经历", research: "科研经历", campus: "校园经历", volunteer: "志愿经历" })[collection] || collection;
+    const collectionLabel = ({ education: "教育经历", work: "工作经历", internships: "实习经历", projects: "项目经历", research: "科研经历", campus: "校园经历", volunteer: "志愿经历", awards: "获奖经历", certificates: "证书" })[collection] || collection;
     const primaryKey = RECORD_PRIMARY_KEYS[collection];
     const title = cleanString(profile?.[collection]?.[occurrence]?.[primaryKey], 80);
     return `${collectionLabel} ${occurrence + 1}${title ? `「${title}」` : ""} · ${fieldLabel}`;
+  }
+
+  function profilePathLabel(profile, path) {
+    const pattern = path.replace(/\.\d+\./, ".$.");
+    const matched = FIELD_RULES.find((candidate) => candidate.path === pattern);
+    const record = path.match(/^(\w+)\.(\d+)\.(\w+)$/);
+    return record ? formatRepeatCanonicalLabel(profile, record[1], Number(record[2]), matched?.label || record[3]) : matched?.label || path;
+  }
+
+  function mapFromProfile(profileInput, item, field, sourcePath, remembered = false) {
+    if (!item || field.unsupported || field.currentValue || ["existing", "filled", "skipped"].includes(item.status)) return item;
+    const profile = sanitizeProfile(profileInput);
+    const row = flattenProfile(profile, { includeSensitive: true }).find((candidate) => candidate.path === sourcePath);
+    if (!row) return item;
+    const value = datePartValue(row.value, field.datePart);
+    if (!value) return item;
+    const crossCategory = field.repeatKind === "internships" && /^work\./.test(sourcePath);
+    if (crossCategory && !profile.automationPolicy.allowWorkAsInternship) return item;
+    const sensitive = isSensitivePath(sourcePath);
+    return { ...item, canonicalKey: sourcePath, canonicalLabel: profilePathLabel(profile, sourcePath), value, confidence: 1,
+      status: sensitive || crossCategory ? "review" : "ready", selected: !sensitive && !crossCategory, sensitive, crossCategory,
+      manualMapped: true, reason: `${remembered ? "按此网站记住的字段对应关系取值" : "你已从资料库指定填充内容"}${crossCategory ? "；真实工作经历用于实习栏目，需勾选确认" : ""}${sensitive ? "；敏感信息需勾选确认" : ""}` };
+  }
+
+  function fieldMemoryKey(url, field) {
+    const label = normalizeText(field.label);
+    // Repeated records must be chosen/realigned each time; never remember an array index.
+    if (field.repeatKind || field.datePart || !label || /必填|未命名|^请输入$|^请选择$/.test(label)) return "";
+    try {
+      const parsed = new URL(url);
+      return JSON.stringify([parsed.origin, parsed.pathname, normalizeText(field.section), label, field.type || field.tag || "text"]);
+    } catch (_) { return ""; }
   }
 
   function flattenProfile(profileInput, options = {}) {
@@ -602,17 +669,17 @@
     const decisions = Array.isArray(decisionsInput) ? decisionsInput : [];
     for (const decision of decisions.slice(0, 250)) {
       const item = plan.find((entry) => entry.fieldId === String(decision?.fieldId || ""));
-      if (!item || ["existing", "unsupported", "filled"].includes(item.status)) continue;
+      if (!item || ["ready", "existing", "unsupported", "filled"].includes(item.status)) continue;
       if (decision?.action === "skip") continue;
       const sourcePath = cleanString(decision?.sourcePath, 300).replace(/\[(\d+)\]/g, ".$1");
-      const value = values.get(sourcePath);
+      const value = datePartValue(values.get(sourcePath), fields.get(item.fieldId)?.datePart);
       if (!value) continue;
       const field = fields.get(item.fieldId) || {};
-      const sourceRecord = sourcePath.match(/^(education|work|internships|projects|research|campus|volunteer)\.(\d+)\./);
+      const sourceRecord = sourcePath.match(/^(education|work|internships|projects|research|campus|volunteer|awards|certificates)\.(\d+)\./);
       if (sourceRecord && field.repeatKind) {
         const sameCollection = sourceRecord[1] === field.repeatKind;
         const allowedCrossCollection = field.repeatKind === "internships" && sourceRecord[1] === "work" && profile.automationPolicy.allowWorkAsInternship;
-        if ((!sameCollection && !allowedCrossCollection) || (Number.isInteger(Number(field.repeatIndex)) && Number(sourceRecord[2]) !== Number(field.repeatIndex))) continue;
+        if ((!sameCollection && !allowedCrossCollection) || (Number.isInteger(Number(field.repeatIndex)) && Number(sourceRecord[2]) !== Number(item.sourceIndex ?? field.repeatIndex))) continue;
       }
       const fieldContext = normalizeText(`${field.section || item.section || ""} ${field.label || item.label || ""}`);
       const workRecord = sourcePath.match(/^work\.(\d+)\./);
@@ -771,6 +838,7 @@
     RECORD_SCHEMAS, FIELD_RULES, cloneDefaultProfile, sanitizeProfile, normalizeText, textSimilarity,
     bestRuleForField, buildFillPlan, profileCompleteness, extractProfileDraftFromResume,
     parseRecordLines, serializeRecordLines, flattenProfile, buildAIProfileView,
-    applyAIPlanDecisions, mergeProfilePatch, filterProfileByEvidence, getPathValue, isSensitivePath
+    applyAIPlanDecisions, mergeProfilePatch, filterProfileByEvidence, getPathValue, isSensitivePath,
+    datePartValue, profilePathLabel, mapFromProfile, fieldMemoryKey
   };
 });

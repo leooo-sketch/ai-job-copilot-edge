@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1] - 2026-09-14
+
+- Support legacy Ant Design dropdown items and selected-value labels; exclude disabled, detached and hidden candidates.
+- Avoid toggling already-open associated dropdowns closed before selecting.
+- Add explicit education-level/degree and top-percentage label synonyms; ambiguous options remain unselected.
+- Recognize 学科 and keep 培养方式 and 是否统招 as independent education fields. Existing 学习形式 is retained; no automatic inference of training/admission facts.
+- 32 automated tests pass. The user's Hisense page has not been inspected live; framework attribution from the screenshot remains unconfirmed. Special calendars, cascaders and virtualized menus remain limitations.
+- Upgrade in the existing extension directory, reload the extension and refresh application tabs. Export the profile first; do not uninstall before preserving data.
+
+## [0.6.0] - 2026-09-06
+
+### Fixed
+
+- Filter validation messages out of semantic field labels; recognize work duties and internship job titles precisely.
+- Group split year/month/day date controls and keep dates before company names attached to their own records, including flat sibling layouts.
+- Match visible dropdown labels rather than internal numeric option codes; scope popup selection and verify retained results.
+- Read selected React Select values from their wrappers, preserve existing values, and detect rejected text writes.
+- Align AI paths with the already selected source record and preserve reliable local mappings.
+
+### Added
+
+- Award/certificate dates and separate editable cards, retaining profile schema v3 and its existing storage key.
+- Personal highest-education study-mode and graduation-year mapping.
+- Explicit profile-source picker and site/path-scoped local mapping memory for non-repeating fields, with reset control.
+- Review-only reuse of the same experience's summary when its duties field is empty; no invented duties.
+- Nine new DOM/core/editor regression tests (30 total). These use synthetic forms, not a claim of live ATS certification.
+- Research and upgrade instructions in docs/AUTOFILL-0.6.md.
+
 ## [0.5.0] - 2026-09-02
 
 ### Added

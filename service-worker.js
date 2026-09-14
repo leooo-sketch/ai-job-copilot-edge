@@ -150,14 +150,16 @@ async function reasonAutofillWithAI(payload = {}) {
     section: String(field.section || "").slice(0, 300), type: String(field.type || field.tag || ""),
     placeholder: String(field.placeholder || "").slice(0, 300), options: Array.isArray(field.options) ? field.options.slice(0, 80) : [],
     currentValuePresent: Boolean(field.currentValue), required: Boolean(field.required),
-    repeatKind: String(field.repeatKind || ""), repeatIndex: Number.isInteger(Number(field.repeatIndex)) ? Number(field.repeatIndex) : null
+    repeatKind: String(field.repeatKind || ""), repeatIndex: Number.isInteger(Number(field.repeatIndex)) ? Number(field.repeatIndex) : null,
+    datePart: String(field.datePart || ""), dateRole: String(field.dateRole || "")
   }));
   const deterministicPlan = (Array.isArray(payload.plan) ? payload.plan : []).slice(0, 250).map((item) => ({
-    fieldId: item.fieldId, status: item.status, canonicalKey: item.canonicalKey, confidence: item.confidence
+    fieldId: item.fieldId, status: item.status, canonicalKey: item.canonicalKey, confidence: item.confidence, sourceIndex: item.sourceIndex
   }));
   const prompt = [
     "任务：复核企业网申字段与候选人资料路径的语义映射。只做路径选择，绝对不能生成或改写候选人值。",
     "只允许从 profilePaths 中逐字选择 sourcePath。已有内容、附件、声明同意框、无证据的问题应 action=skip。",
+    "datePart=year/month/day 是同一个日期被网页拆成独立控件；仍引用完整日期路径，本机会提取相应年月日。ready 字段不要改动；sourceIndex 已按网页现有值对齐，应保持该记录索引。",
     "优先按栏目映射：教育→education，工作→work，实习→internships，项目经历/项目经验→projects。先匹配同一条记录的名称、职位/角色与时间，再选择该记录的其他字段，禁止把不同项目或不同公司的字段串到同一张网页卡片。",
     "如果网页只有“实习经历”而资料只有真实工作经历，且 allowWorkAsInternship=true，可以建议 work.N.* 映射，但 reason 必须明确说明是工作经历跨栏目填入，confidence 不得高于 0.84；最终必须人工确认。不得把工作性质改写成实习。",
     "输出 JSON：{decisions:[{fieldId,action:'map'|'skip',sourcePath,sourceLabel,confidence,reason}],summary}。reason 只给简短可核验理由，不输出隐藏推理过程。",

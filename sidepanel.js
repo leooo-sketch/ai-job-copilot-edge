@@ -68,13 +68,21 @@ const PROFILE_SCALAR_FIELDS = Object.freeze({
 
 const PROFILE_RECORD_FIELDS = Object.freeze({
   profileResearchInput: "research", profileCampusInput: "campus", profileVolunteerInput: "volunteer",
-  profileSkillsInput: "skills", profileLanguagesInput: "languages", profileCertificatesInput: "certificates",
-  profileAwardsInput: "awards", profilePublicationsInput: "publications", profilePatentsInput: "patents",
+  profileSkillsInput: "skills", profileLanguagesInput: "languages",
+  profilePublicationsInput: "publications", profilePatentsInput: "patents",
   profileFamilyMembersInput: "familyMembers", profileEmergencyContactsInput: "emergencyContacts",
   profileReferencesInput: "references"
 });
 
 const PROFILE_STRUCTURED_EDITORS = Object.freeze({
+  awards: {
+    containerId: "profileAwardRecords", title: "获奖经历", primary: "title",
+    fields: [["title", "奖项名称"], ["awarder", "颁奖单位"], ["date", "获奖时间", "text", "YYYY-MM"], ["level", "奖项级别"], ["summary", "获奖说明", "textarea"]]
+  },
+  certificates: {
+    containerId: "profileCertificateRecords", title: "证书", primary: "name",
+    fields: [["name", "证书名称"], ["issuer", "发证机构"], ["date", "获得时间", "text", "YYYY-MM-DD"], ["expiryDate", "有效期", "text", "YYYY-MM-DD"], ["id", "证书编号"], ["url", "验证链接", "url"]]
+  },
   education: {
     containerId: "profileEducationRecords", title: "教育经历", primary: "institution",
     fields: [
@@ -83,7 +91,7 @@ const PROFILE_STRUCTURED_EDITORS = Object.freeze({
       ["studyType", "学位"], ["degreeType", "学位类型"], ["educationLevel", "学历"],
       ["startDate", "入学时间", "text", "YYYY-MM"], ["endDate", "毕业时间", "text", "YYYY-MM"], ["graduationDate", "毕业日期", "text", "YYYY-MM-DD"],
       ["score", "GPA/平均成绩"], ["scoreScale", "GPA满分"], ["rank", "专业/年级排名"], ["rankTotal", "排名总人数"],
-      ["educationType", "受教育类型/学习形式"], ["studentType", "学生类型"], ["admissionBatch", "录取批次"],
+      ["educationType", "受教育类型/学习形式"], ["trainingMode", "培养方式", "text", "定向 / 非定向（以实际情况为准）"], ["unifiedAdmission", "是否统招", "text", "是 / 否"], ["studentType", "学生类型"], ["admissionBatch", "录取批次"],
       ["overseasStudy", "是否有海外学习经历", "text", "是 / 否"], ["status", "在读/毕业状态"],
       ["country", "国家/地区"], ["city", "学校所在地"], ["courses", "主修课程", "textarea"], ["thesis", "论文题目"],
       ["advisor", "导师"], ["honors", "在校荣誉", "textarea"], ["summary", "教育经历描述", "textarea"]
@@ -139,7 +147,8 @@ const state = {
   autofillScanning: false,
   autofillFilling: false,
   autofillFields: [],
-  autofillPlan: []
+  autofillPlan: [],
+  fieldMappings: {}
 };
 
 const ui = {};
@@ -150,7 +159,8 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   collectUI();
   bindEvents();
-  const stored = await chrome.storage.local.get([CONFIG_KEY, STATE_KEY, PROFILE_KEY]);
+  const stored = await chrome.storage.local.get([CONFIG_KEY, STATE_KEY, PROFILE_KEY, "autofillFieldMappings"]);
+  state.fieldMappings = stored.autofillFieldMappings || {};
   state.config = { ...DEFAULT_CONFIG, ...(stored[CONFIG_KEY] || {}) };
   state.profile = JobAutofillCore.sanitizeProfile(stored[PROFILE_KEY]);
   state.jobs = Array.isArray(stored[STATE_KEY]?.jobs) ? stored[STATE_KEY].jobs : [];
@@ -302,7 +312,9 @@ async function scanApplicationForm() {
       education: state.profile.education.length,
       work: state.profile.work.length,
       internships: state.profile.internships.length || (state.profile.automationPolicy.allowWorkAsInternship ? state.profile.work.length : 0),
-      projects: state.profile.projects.length
+      projects: state.profile.projects.length,
+      awards: state.profile.awards.length,
+      certificates: state.profile.certificates.length
     };
     try {
       const prepareResponse = await chrome.tabs.sendMessage(state.activeTab.id, { type: "AUTOFILL_PREPARE_REPEAT_SECTIONS", desiredCounts });
@@ -337,6 +349,12 @@ async function scanApplicationForm() {
         appendLog("warning", "千问语义复核未完成", `${cleanError(error)}；已保留本地规则结果`);
       }
     }
+    state.autofillPlan = state.autofillPlan.map((item) => {
+      const field = state.autofillFields.find((candidate) => candidate.fieldId === item.fieldId);
+      const key = JobAutofillCore.fieldMemoryKey(state.activeTab.url, field);
+      const path = key && state.fieldMappings[key];
+      return path ? JobAutofillCore.mapFromProfile(state.profile, item, field, path, true) : item;
+    });
     renderAutofill();
     appendLog("info", `识别到 ${state.autofillFields.length} 个网申字段`, safeHostname(response.pageUrl || state.activeTab.url));
     if (!state.autofillFields.length) {
@@ -357,7 +375,7 @@ async function scanApplicationForm() {
 }
 
 function repeatCollectionLabel(kind) {
-  return ({ education: "教育", work: "工作", internships: "实习", projects: "项目" })[kind] || kind;
+  return ({ education: "教育", work: "工作", internships: "实习", projects: "项目", awards: "获奖", certificates: "证书" })[kind] || kind;
 }
 
 async function injectAutofillAgent(tabId) {
@@ -421,6 +439,7 @@ function renderAutofill() {
       locateFieldButton(item)
     );
     body.append(actions);
+    if (!["unsupported", "existing", "filled", "skipped"].includes(item.status)) body.append(profileSourcePicker(item));
     card.append(checkbox, body);
     ui.autofillPlanList.append(card);
   });
@@ -472,11 +491,55 @@ function locateFieldButton(item) {
 }
 
 function handleAutofillPlanChange(event) {
+  if (event.target.matches("select[data-source-field]")) {
+    const fieldId = event.target.dataset.sourceField;
+    const index = state.autofillPlan.findIndex((item) => item.fieldId === fieldId);
+    const field = state.autofillFields.find((item) => item.fieldId === fieldId);
+    if (index < 0 || !field || state.autofillFilling || !event.target.value) return;
+    const key = JobAutofillCore.fieldMemoryKey(state.activeTab?.url || "", field);
+    if (event.target.value === "__automatic__") {
+      delete state.fieldMappings[key];
+      chrome.storage.local.set({ autofillFieldMappings: state.fieldMappings }).catch(() => showToast("未能清除记忆，请重试"));
+      state.autofillPlan[index] = JobAutofillCore.buildFillPlan(state.profile, state.autofillFields).find((item) => item.fieldId === fieldId);
+      renderAutofill();
+      return;
+    }
+    state.autofillPlan[index] = JobAutofillCore.mapFromProfile(state.profile, state.autofillPlan[index], field, event.target.value);
+    // Only non-repeating schema paths are reusable across visits.
+    if (key && !/\.\d+\./.test(event.target.value)) {
+      state.fieldMappings[key] = event.target.value;
+      state.fieldMappings = Object.fromEntries(Object.entries(state.fieldMappings).slice(-300));
+      chrome.storage.local.set({ autofillFieldMappings: state.fieldMappings }).catch(() => showToast("字段已选择，但记忆未保存"));
+    }
+    renderAutofill();
+    return;
+  }
   if (!event.target.matches("input[type='checkbox'][data-field-id]")) return;
   const item = state.autofillPlan.find((entry) => entry.fieldId === event.target.dataset.fieldId);
   if (!item || !["ready", "review"].includes(item.status)) return;
   item.selected = event.target.checked;
   renderAutofill();
+}
+
+function profileSourcePicker(item) {
+  const details = element("details", "profile-source-picker");
+  details.append(element("summary", "", "从资料库选择内容 / 修正对应关系"));
+  details.addEventListener("toggle", () => {
+    if (!details.open || details.querySelector("select")) return;
+    const select = document.createElement("select");
+    select.dataset.sourceField = item.fieldId;
+    select.setAttribute("aria-label", `为${item.label}选择资料`);
+    select.append(new Option("请选择已有资料，无需重新打字", ""));
+    select.append(new Option("恢复自动识别，并忘记此字段的对应关系", "__automatic__"));
+    JobAutofillCore.flattenProfile(state.profile, { includeSensitive: true }).forEach((row) => {
+      const name = JobAutofillCore.profilePathLabel(state.profile, row.path);
+      const preview = maskAutofillValue({ value: row.value, canonicalKey: row.path, sensitive: JobAutofillCore.isSensitivePath(row.path) }).slice(0, 65);
+      select.append(new Option(`${name} · ${preview}`, row.path));
+    });
+    select.value = item.canonicalKey;
+    details.append(select, element("p", "autofill-reason", "选择后检查预览并填写。普通字段会在此网站记住对应关系；重复经历每次按具体记录选择。"));
+  });
+  return details;
 }
 
 async function handleAutofillPlanClick(event) {
