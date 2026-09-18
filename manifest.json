@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "职舟 AI 求职智能体",
-  "version": "0.6.1",
-  "description": "可靠识别模糊字段、重复经历卡片、职位联想下拉与单选控件，先预览确认，再准确填充。",
+  "version": "0.8.0",
+  "description": "扩展结构化网申资料库，一键填写可靠匹配的信息；不覆盖已有内容或自动提交。",
   "permissions": [
     "sidePanel",
     "storage",

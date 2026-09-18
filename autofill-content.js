@@ -1,16 +1,31 @@
 (function installReliableAutofillAgent() {
   "use strict";
 
-  if (globalThis.__JOB_AUTOFILL_AGENT__?.version === 5) return;
+  if (globalThis.__JOB_AUTOFILL_AGENT__?.version === 6) return;
   if (globalThis.__JOB_AUTOFILL_AGENT__?.listener) chrome.runtime.onMessage.removeListener(globalThis.__JOB_AUTOFILL_AGENT__.listener);
 
   const state = {
-    version: 5,
+    version: 6,
     fieldMap: new Map(),
     nearbyLabelCache: new WeakMap(),
     lastScanAt: 0
   };
   globalThis.__JOB_AUTOFILL_AGENT__ = state;
+
+  const SELECT_OPTION_SELECTOR = [
+    "[role='option']", ".Select-option", "[class*='select__option']", ".moka-dropdown-item",
+    "[class*='dropdown-option']", "[class*='dropdown-item']", "[class*='select-option']",
+    "[class*='SelectOption']", ".ant-select-dropdown-menu-item", ".ant-select-item-option",
+    ".el-select-dropdown__item", ".arco-select-option", ".semi-select-option",
+    ".ivu-select-item", ".rc-virtual-list-holder-inner > *",
+    "[role='listbox'] > li", "[role='listbox'] > div", "[class*='dropdown'] li", "[class*='dropdown-menu'] li",
+    "[class*='dropdown-list'] li", "[class*='select-dropdown'] li", "[class*='option-item']"
+  ].join(",");
+  const SELECT_POPUP_SELECTOR = [
+    "[role='listbox']", ".ant-select-dropdown", ".el-select-dropdown", ".arco-select-popup",
+    ".semi-select-option-list", ".ivu-select-dropdown", ".Select-menu-outer",
+    "[class*='select-dropdown']", "[class*='selectDropdown']", "[class*='dropdown-menu']", "[class*='DropdownMenu']"
+  ].join(",");
 
   state.listener = (message, _sender, sendResponse) => {
     if (message?.type === "AUTOFILL_PREPARE_REPEAT_SECTIONS") {
@@ -232,7 +247,7 @@
       ".semi-select:not(.semi-select-disabled)",
       ".ivu-select:not(.ivu-select-disabled)",
       ".Select-control", ".moka-select", ".custom-select", "[class*='select__control']", "[class*='select-control']",
-      "[aria-haspopup='listbox'][class*='select']",
+      "[aria-haspopup='listbox']", "[tabindex][class*='select']:not([role='option'])", "[tabindex][class*='Select']:not([role='option'])",
       "[role='radio']",
       ".ant-radio-wrapper:not(.ant-radio-wrapper-disabled)",
       ".el-radio:not(.is-disabled)",
@@ -255,7 +270,7 @@
           const usableInnerRadio = [...element.querySelectorAll("input[type='radio'], [role='radio']")].find((candidate) => isUsableElement(candidate));
           if (usableInnerRadio) continue;
         } else {
-          const selectWrapper = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select-control, .moka-select, .custom-select, [class*='select__control'], [class*='select-control'], [aria-haspopup='listbox'][class*='select']");
+          const selectWrapper = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select-control, .moka-select, .custom-select, [class*='select__control'], [class*='select-control'], [aria-haspopup='listbox'], [tabindex][class*='select'], [tabindex][class*='Select']");
           const radioWrapper = element.closest(".ant-radio-wrapper, .el-radio, .arco-radio, .semi-radio, .ivu-radio-wrapper");
           if ((selectWrapper && found.has(selectWrapper)) || (radioWrapper && found.has(radioWrapper))) continue;
         }
@@ -690,7 +705,7 @@
     if (isFrameworkSelectWrapper(element)) return true;
     if (element.getAttribute("role") === "combobox") return true;
     if (!(element instanceof HTMLInputElement)) return false;
-    const ancestor = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select, .Select-control, [class*='select'], [role='combobox'], [aria-haspopup='listbox']");
+    const ancestor = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select, .Select-control, [class*='select'], [class*='Select'], [role='combobox'], [aria-haspopup='listbox']");
     const context = compactText(`${element.getAttribute("placeholder") || ""} ${element.getAttribute("aria-label") || ""} ${element.name || ""} ${element.id || ""}`).toLowerCase();
     const semanticAutocomplete = /(?:搜索.*(?:职位|岗位)|(?:职位|岗位)关键词|job.*keyword|position.*keyword)/i.test(context);
     return Boolean(
@@ -699,13 +714,14 @@
       || element.getAttribute("aria-owns")
       || element.getAttribute("list")
       || ancestor && (element.readOnly || ancestor.getAttribute("aria-haspopup") === "listbox" || /select|autocomplete|suggest/i.test(ancestor.className))
+      || element.readOnly && /(?:请)?选择/.test(element.placeholder || "") && !isDateLikeElement(element) && Boolean(element.parentElement?.querySelector("svg, [class*='arrow'], [class*='suffix'], [class*='caret']"))
       || semanticAutocomplete
     );
   }
 
   function isFrameworkSelectWrapper(element) {
     if (!(element instanceof HTMLElement)) return false;
-    return element.matches(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select-control, .moka-select, .custom-select, [class*='select__control'], [class*='select-control'], [aria-haspopup='listbox'][class*='select']");
+    return element.matches(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select-control, .moka-select, .custom-select, [class*='select__control'], [class*='select-control'], [aria-haspopup='listbox'], [tabindex][class*='select']:not([class*='option']), [tabindex][class*='Select']:not([class*='Option'])");
   }
 
   function isDateLikeElement(element) {
@@ -720,13 +736,23 @@
     if (element.isContentEditable) return String(element.textContent || "").trim();
     if (element instanceof HTMLTextAreaElement) return element.value.trim();
     if (isCustomSelect(element)) {
-      const wrapper = element.closest(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select-control, .moka-select, .custom-select, [class*='select__control'], [class*='select-control']") || element;
-      const selected = wrapper.querySelector(".ant-select-selection-item, .ant-select-selection-selected-value, .el-select__selected-item, .arco-select-view-value, .semi-select-selection-text, .ivu-select-selected-value, .Select-value-label, [class*='singleValue'], [class*='select-value'], [data-value]:not(input):not([role='option'])");
-      const value = compactText(selected?.textContent || element.value || element.getAttribute("data-value") || "");
+      const wrapper = selectControlWrapper(element);
+      const value = readSelectDisplay(wrapper, element);
       return isGenericFieldText(value) ? "" : value;
     }
     if (element instanceof HTMLSelectElement) return element.value ? compactText(element.selectedOptions[0]?.textContent || element.value) : "";
     return compactText(element.value || element.getAttribute("data-value") || "");
+  }
+
+  function readSelectDisplay(wrapper, element) {
+    const selected = wrapper.querySelector?.(".ant-select-selection-item, .ant-select-selection-selected-value, .el-select__selected-item, .arco-select-view-value, .semi-select-selection-text, .ivu-select-selected-value, .Select-value-label, [class*='singleValue'], [class*='select-value'], [class*='selected-value'], [class*='selection-item']");
+    return compactText(selected?.textContent || element.value || element.getAttribute?.("data-value") || "");
+  }
+
+  function selectControlWrapper(element) {
+    return element.closest?.(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select, .moka-select, .custom-select, [class*='select__control'], [class*='select-control'], [class*='select'], [class*='Select'], [role='combobox'], [aria-haspopup='listbox']")
+      || (element instanceof HTMLInputElement && element.readOnly && /(?:请)?选择/.test(element.placeholder || "") ? element.parentElement : null)
+      || element;
   }
 
   async function applyPlan(entriesInput) {
@@ -862,13 +888,14 @@
   }
 
   async function fillCustomSelect(element, value) {
-    const wrapper = element.closest?.(".ant-select, .el-select, .arco-select-view, .semi-select, .ivu-select, .Select, .moka-select, .custom-select, [class*='select__control'], [class*='select-control'], [class*='select'], [role='combobox'], [aria-haspopup='listbox']") || element;
+    const wrapper = selectControlWrapper(element);
     const input = element instanceof HTMLInputElement ? element : wrapper.querySelector?.("input:not([type='hidden']), [role='combobox']");
     const activationTarget = input || element;
-    const beforeOptions = new Set(deepQueryAll("[role='option'], .Select-option, [class*='select__option'], .moka-dropdown-item, [class*='dropdown-option'], .ant-select-dropdown-menu-item, .ant-select-item-option, .el-select-dropdown__item, .ivu-select-item").filter(isVisibleOption));
+    const beforeOptions = new Set(deepQueryAll(SELECT_OPTION_SELECTOR).filter(isSelectableOption));
+    const beforePopups = new Set(deepQueryAll(SELECT_POPUP_SELECTOR).filter(isVisibleOption));
     wrapper.scrollIntoView({ block: "center", inline: "nearest" });
     activationTarget.focus({ preventScroll: true });
-    const alreadyOpen = wrapper.getAttribute("aria-expanded") === "true" || input?.getAttribute("aria-expanded") === "true" || findSelectOptions(wrapper, beforeOptions).length > 0;
+    const alreadyOpen = wrapper.getAttribute("aria-expanded") === "true" || input?.getAttribute("aria-expanded") === "true" || findSelectOptions(wrapper, beforeOptions, beforePopups).length > 0;
     if (!alreadyOpen) {
       activationTarget.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window }));
       activationTarget.click();
@@ -881,12 +908,18 @@
       dispatchTypingEvents(input, value);
     }
 
-    let options = await waitForSelectOptions(wrapper, 1800, beforeOptions);
+    let options = await waitForSelectOptions(wrapper, 1000, beforeOptions, beforePopups);
     let option = chooseOption(options, value, optionSearchText);
-    if (!option && editable) {
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", code: "ArrowDown", bubbles: true, cancelable: true }));
-      options = await waitForSelectOptions(wrapper, 700, beforeOptions);
-      option = chooseOption(options, value, optionSearchText);
+    if (!option) {
+      const popupInput = findSelectSearchInput(wrapper, beforePopups);
+      if (popupInput && popupInput !== input) {
+        popupInput.focus({ preventScroll: true });
+        setNativeInputValue(popupInput, value);
+        dispatchTypingEvents(popupInput, value);
+      } else if (editable) {
+        input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", code: "ArrowDown", bubbles: true, cancelable: true }));
+      }
+      option = await waitForMatchingSelectOption(wrapper, value, 1300, beforeOptions, beforePopups);
     }
     if (!option) {
       activationTarget.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true }));
@@ -905,11 +938,9 @@
       await wait(100);
     }
     const selectedText = compactText(option.textContent);
-    const actual = readCurrentValue(element) || readCurrentValue(wrapper);
+    const actual = readCurrentValue(element) || readSelectDisplay(wrapper, input || element);
     const accepted = Boolean(actual && chooseOption([{ text: actual }], value, (item) => item.text));
-    const selectedInUI = option.getAttribute("aria-selected") === "true" || option.classList.contains("is-selected");
-    const popupClosed = wrapper.getAttribute("aria-expanded") !== "true" && input?.getAttribute("aria-expanded") !== "true" && !isVisibleOption(option);
-    const ok = selectedInUI || accepted && (!editable || popupClosed);
+    const ok = accepted;
     flashElement(wrapper);
     return { ok, message: ok ? `已选择并核验“${selectedText}”` : "点击后未检测到选中结果，请重新扫描或手动选择" };
   }
@@ -934,49 +965,69 @@
     return `${item.textContent || ""}|${item.getAttribute("aria-label") || ""}|${item.getAttribute("title") || ""}`;
   }
 
-  function findSelectOptions(wrapper, beforeOptions = new Set()) {
-    const selectors = [
-      "[role='listbox'] [role='option']", "[role='option']",
-      ".el-select-dropdown__item:not(.is-disabled)",
-      ".ant-select-item-option:not(.ant-select-item-option-disabled)",
-      ".ant-select-dropdown-menu-item:not(.ant-select-dropdown-menu-item-disabled)",
-      ".arco-select-option:not(.arco-select-option-disabled)",
-      ".semi-select-option-list [role='option']", ".semi-select-option",
-      ".ivu-select-item", ".rc-virtual-list-holder-inner > *", ".Select-option",
-      "[class*='select__option']", ".moka-dropdown-item", "[class*='dropdown-option']", ".moka-select-dropdown [class*='option']"
-    ].join(",");
+  function controlledSelectRoots(wrapper) {
     const controlledIds = [wrapper, ...wrapper.querySelectorAll?.("[aria-controls], [aria-owns]") || []]
       .flatMap((node) => `${node.getAttribute?.("aria-controls") || ""} ${node.getAttribute?.("aria-owns") || ""}`.trim().split(/\s+/)).filter(Boolean);
-    const controlledRoots = controlledIds.map((id) => document.getElementById(id)).filter(Boolean);
-    const collectFrom = (roots) => {
-      const found = new Set();
-      for (const root of roots) for (const option of root.querySelectorAll(selectors)) {
-        if (isVisibleOption(option) && option.getAttribute("aria-disabled") !== "true" && !option.matches("[disabled], [class*='disabled']")) found.add(option);
-      }
-      return [...found];
-    };
-    const controlled = collectFrom(controlledRoots);
-    if (controlled.length) return controlled;
-    if (controlledRoots.length) return [];
-    const local = collectFrom([wrapper]);
-    if (local.length) return local;
-    const found = new Set();
-    for (const option of document.querySelectorAll(selectors)) {
-      if (isVisibleOption(option) && option.getAttribute("aria-disabled") !== "true" && !option.matches("[disabled], [class*='disabled']") && !beforeOptions.has(option)) found.add(option);
-    }
-    const roots = new Set([...found].map((option) => option.closest("[role='listbox'], .Select-menu-outer, [class*='dropdown'], [class*='menu']") || option.parentElement));
-    return roots.size <= 1 ? [...found] : [];
+    return [...new Set(controlledIds.map((id) => document.getElementById(id)).filter(Boolean))];
   }
 
-  async function waitForSelectOptions(wrapper, timeoutMs, beforeOptions) {
+  function selectPopupRoots(wrapper, beforePopups = new Set()) {
+    const controlled = controlledSelectRoots(wrapper);
+    if (controlled.length) return controlled;
+    const local = [...wrapper.querySelectorAll(SELECT_POPUP_SELECTOR)].filter(isVisibleOption);
+    if (local.length) return local;
+    const visible = deepQueryAll(SELECT_POPUP_SELECTOR).filter(isVisibleOption);
+    const fresh = visible.filter((root) => !beforePopups.has(root));
+    if (fresh.length === 1) return fresh;
+    if ((wrapper.getAttribute("aria-expanded") === "true" || wrapper.querySelector("[aria-expanded='true']")) && visible.length === 1) return visible;
+    return [];
+  }
+
+  function isSelectableOption(element) {
+    if (!isVisibleOption(element) || element.getAttribute("aria-disabled") === "true" || element.matches("[disabled], [class*='disabled']")) return false;
+    if (element.querySelector("input, textarea, [role='option'], li, button")) return false;
+    const label = compactText(element.getAttribute("aria-label") || element.textContent);
+    return Boolean(label && label.length <= 120 && !isGenericFieldText(label));
+  }
+
+  function findSelectOptions(wrapper, beforeOptions = new Set(), beforePopups = new Set()) {
+    const roots = selectPopupRoots(wrapper, beforePopups);
+    const collect = (rootsToRead) => [...new Set(rootsToRead.flatMap((root) => [...root.querySelectorAll(SELECT_OPTION_SELECTOR)]))].filter(isSelectableOption);
+    if (roots.length) return collect(roots);
+    const local = collect([wrapper]);
+    if (local.length) return local;
+    const fresh = deepQueryAll(SELECT_OPTION_SELECTOR).filter((option) => !beforeOptions.has(option) && isSelectableOption(option));
+    const owners = new Set(fresh.map((option) => option.closest(SELECT_POPUP_SELECTOR) || option.parentElement));
+    return owners.size === 1 ? fresh : [];
+  }
+
+  function findSelectSearchInput(wrapper, beforePopups) {
+    const roots = selectPopupRoots(wrapper, beforePopups);
+    const selector = "input[type='search'], input[placeholder*='搜索'], input[placeholder*='检索'], input[role='combobox']";
+    const inputs = roots.flatMap((root) => [...root.querySelectorAll(selector)]).filter((candidate) => isUsableElement(candidate) && !candidate.readOnly);
+    return inputs.length === 1 ? inputs[0] : null;
+  }
+
+  async function waitForSelectOptions(wrapper, timeoutMs, beforeOptions, beforePopups) {
     const deadline = Date.now() + timeoutMs;
     let options = [];
     do {
-      options = findSelectOptions(wrapper, beforeOptions);
+      options = findSelectOptions(wrapper, beforeOptions, beforePopups);
       if (options.length) return options;
       await wait(90);
     } while (Date.now() < deadline);
     return options;
+  }
+
+  async function waitForMatchingSelectOption(wrapper, value, timeoutMs, beforeOptions, beforePopups) {
+    const deadline = Date.now() + timeoutMs;
+    let option = null;
+    do {
+      option = chooseOption(findSelectOptions(wrapper, beforeOptions, beforePopups), value, optionSearchText);
+      if (option) return option;
+      await wait(90);
+    } while (Date.now() < deadline);
+    return option;
   }
 
   function chooseOption(options, desiredValue, textGetter) {

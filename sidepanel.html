@@ -117,12 +117,13 @@
         <div class="hero-card autofill-hero">
           <div>
             <span class="eyebrow">可靠网申</span>
-            <h2>先扫描预览，再填写</h2>
-            <p>只自动勾选高置信度字段，不覆盖网页已有内容；证件、出生日期等敏感信息必须由你逐项确认。</p>
+            <h2>一键填写已识别资料</h2>
+            <p>点击后扫描并填写资料库中可靠匹配的字段，包括已保存的敏感信息；不会覆盖已有内容或提交网申。</p>
           </div>
           <div class="hero-actions">
             <button id="editProfileButton" class="hero-secondary-button" type="button">维护资料库</button>
-            <button id="scanFormButton" class="primary-button" type="button">扫描当前表单</button>
+            <button id="scanFormButton" class="hero-secondary-button" type="button">仅扫描预览</button>
+            <button id="scanAndFillButton" class="primary-button" type="button">一键扫描并填写</button>
           </div>
         </div>
 
@@ -148,7 +149,7 @@
 
         <div class="section-heading autofill-heading">
           <div>
-            <span class="eyebrow">字段级审核</span>
+            <span class="eyebrow">填写结果与可选核对</span>
             <h2>填充预览</h2>
           </div>
           <div class="compact-actions">
@@ -167,7 +168,7 @@
             <strong><span id="selectedFieldCount">0</span> 个字段已选择</strong>
             <span>填完后仍需你逐项核对并手动提交</span>
           </div>
-          <button id="fillSelectedFieldsButton" class="primary-button" type="button">填写所选字段</button>
+          <button id="fillSelectedFieldsButton" class="primary-button" type="button">填写已识别字段</button>
         </div>
       </section>
     </main>
@@ -287,7 +288,8 @@
           <p class="field-note profile-note">可多选 PDF、DOCX、TXT、MD。文件在本地解析后，仅把文字发送到你配置的千问接口；AI 结果会填入编辑区供你核对，不会直接提交网申。扫描版 PDF 需先 OCR。</p>
 
           <fieldset>
-            <legend>1. 基本信息</legend>
+            <legend>1. 基本信息（常见网申字段）</legend>
+            <p class="field-note">只填写真实且确定的资料；截图中的示例内容不会自动导入。年龄、薪资等会变化的项目请定期核对。</p>
             <div class="two-columns">
               <label>姓名<input id="profileNameInput" type="text" autocomplete="off"></label>
               <label>姓 / Last name<input id="profileFamilyNameInput" type="text" autocomplete="off"></label>
@@ -303,20 +305,26 @@
               <label>备用邮箱<input id="profileAlternateEmailInput" type="email" autocomplete="off"></label>
               <label>微信号<input id="profileWechatInput" type="text" autocomplete="off"></label>
               <label>个人主页<input id="profileUrlInput" type="url" autocomplete="off"></label>
+              <label>作品链接 / 作品集地址<input id="profilePortfolioUrlInput" type="url" autocomplete="off"></label>
               <label>GitHub<input id="profileGithubInput" type="url" autocomplete="off"></label>
               <label>LinkedIn<input id="profileLinkedinInput" type="url" autocomplete="off"></label>
               <label>现居城市<input id="profileCurrentCityInput" type="text" autocomplete="off"></label>
               <label>现居省份<input id="profileCurrentProvinceInput" type="text" autocomplete="off"></label>
               <label>现居国家<input id="profileCurrentCountryInput" type="text" autocomplete="off"></label>
+              <label>现居住地址<input id="profileCurrentAddressInput" type="text" autocomplete="off"></label>
+              <label>家乡<input id="profileHometownInput" type="text" autocomplete="off"></label>
               <label>籍贯<input id="profileNativePlaceInput" type="text" autocomplete="off"></label>
               <label>通讯地址<input id="profileAddressInput" type="text" autocomplete="off"></label>
               <label>邮政编码<input id="profilePostalCodeInput" type="text" autocomplete="off"></label>
               <label>国籍<input id="profileNationalityInput" type="text" autocomplete="off"></label>
+              <label>国家/地区（网申口径）<input id="profileCountryRegionInput" type="text" autocomplete="off"></label>
               <label>公民身份<input id="profileCitizenshipInput" type="text" autocomplete="off"></label>
+              <label>职称 / 职业资格证书（汇总）<input id="profileProfessionalQualificationsInput" type="text" autocomplete="off"></label>
               <label>当前公司<input id="profileCurrentCompanyInput" type="text" autocomplete="off"></label>
               <label>当前职位<input id="profileCurrentTitleInput" type="text" autocomplete="off"></label>
               <label>累计工作年限<input id="profileYearsExperienceInput" type="text" placeholder="例如：3年" autocomplete="off"></label>
             </div>
+            <p class="field-note">照片、作品附件和简历文件不能由扩展替你选择本地文件，仍需在网申网页手动上传。</p>
           </fieldset>
 
           <fieldset>
@@ -328,6 +336,7 @@
               <label>期望城市<input id="profileExpectedCityInput" type="text" placeholder="上海, 深圳" autocomplete="off"></label>
               <label>期望最低薪资<input id="profileExpectedSalaryMinInput" type="text" autocomplete="off"></label>
               <label>期望最高薪资<input id="profileExpectedSalaryMaxInput" type="text" autocomplete="off"></label>
+              <label>期望薪资（按网申原文填写）<input id="profileExpectedSalaryTextInput" type="text" placeholder="例如：面议 / 15-20K，不自动推断" autocomplete="off"></label>
               <label>薪资周期<input id="profileSalaryPeriodInput" type="text" placeholder="月 / 年" autocomplete="off"></label>
               <label>币种<input id="profileCurrencyInput" type="text" placeholder="CNY" autocomplete="off"></label>
               <label>可到岗日期<input id="profileAvailableDateInput" type="text" placeholder="YYYY-MM-DD / 随时" autocomplete="off"></label>
@@ -339,15 +348,16 @@
               <label>接受兼职<input id="profileAcceptPartTimeInput" type="text" autocomplete="off"></label>
               <label>接受临时岗位<input id="profileAcceptTemporaryInput" type="text" autocomplete="off"></label>
               <label>接受弹性工作<input id="profileFlexibleWorkInput" type="text" autocomplete="off"></label>
-              <label>申请信息来源<input id="profileSourceInput" type="text" autocomplete="off"></label>
+              <label>申请信息来源 / 了解企业途径<input id="profileSourceInput" type="text" autocomplete="off"></label>
+              <label>求职方式 / 应聘方式<input id="profileApplicationMethodInput" type="text" autocomplete="off"></label>
               <label>内推人姓名<input id="profileReferrerNameInput" type="text" autocomplete="off"></label>
               <label>内推人工号<input id="profileReferrerEmployeeIdInput" type="text" autocomplete="off"></label>
             </div>
           </fieldset>
 
           <fieldset class="sensitive-fieldset">
-            <legend>3. 敏感信息（永不默认勾选）</legend>
-            <p class="field-note">仅填写你愿意保存在本机并用于网申的项目。预览中会遮罩显示，并要求逐项勾选。</p>
+            <legend>3. 基本信息补充（身份 / 健康 / 联系）</legend>
+            <p class="field-note">仅填写你愿意保存在本机并用于网申的敏感项目；有可靠匹配时会参与一键填写，预览中仍会遮罩显示。</p>
             <div class="two-columns">
               <label>证件类型<input id="profileIdTypeInput" type="text" placeholder="例如：居民身份证" autocomplete="off"></label>
               <label>证件号码<input id="profileIdNumberInput" type="text" autocomplete="off"></label>
@@ -355,10 +365,13 @@
               <label>护照号码<input id="profilePassportNumberInput" type="text" autocomplete="off"></label>
               <label>护照有效期<input id="profilePassportExpiryInput" type="text" autocomplete="off"></label>
               <label>出生日期<input id="profileBirthDateInput" type="date" autocomplete="off"></label>
+              <label>年龄（周岁，手动核对）<input id="profileAgeInput" type="number" min="0" max="120" autocomplete="off"></label>
               <label>出生地<input id="profileBirthPlaceInput" type="text" autocomplete="off"></label>
               <label>性别<input id="profileGenderInput" type="text" autocomplete="off"></label>
               <label>民族<input id="profileEthnicityInput" type="text" autocomplete="off"></label>
               <label>健康状况<input id="profileHealthStatusInput" type="text" autocomplete="off"></label>
+              <label>MBTI / PDP 性格测评结果<input id="profilePersonalityAssessmentInput" type="text" autocomplete="off"></label>
+              <label>紧急联系电话<input id="profileEmergencyPhoneInput" type="tel" autocomplete="off"></label>
               <label>婚姻状况<input id="profileMaritalStatusInput" type="text" autocomplete="off"></label>
               <label>政治面貌<input id="profilePoliticalStatusInput" type="text" autocomplete="off"></label>
               <label>入党时间<input id="profilePartyJoinDateInput" type="text" placeholder="YYYY-MM" autocomplete="off"></label>
@@ -380,11 +393,14 @@
               <label>是否需要签证担保<input id="profileRequiresSponsorshipInput" type="text" autocomplete="off"></label>
               <label>是否受竞业限制<input id="profileNonCompeteInput" type="text" autocomplete="off"></label>
               <label>是否有亲属在该公司<input id="profileRelativeAtCompanyInput" type="text" autocomplete="off"></label>
+              <label>是否有亲友在该公司 / 集团任职<input id="profileFriendOrRelativeAtCompanyInput" type="text" placeholder="是 / 否；与仅问亲属的表单分开" autocomplete="off"></label>
               <label>亲属详情<input id="profileRelativeDetailsInput" type="text" autocomplete="off"></label>
               <label>纪律处分记录<input id="profileDisciplinaryHistoryInput" type="text" autocomplete="off"></label>
               <label>刑事记录<input id="profileCriminalHistoryInput" type="text" autocomplete="off"></label>
               <label>利益冲突<input id="profileConflictOfInterestInput" type="text" autocomplete="off"></label>
               <label>是否接受背景调查<input id="profileBackgroundCheckInput" type="text" autocomplete="off"></label>
+              <label>是否准备考研<input id="profilePlansPostgraduateExamInput" type="text" placeholder="是 / 否" autocomplete="off"></label>
+              <label>是否已有导师<input id="profileHasAcademicAdvisorInput" type="text" placeholder="是 / 否" autocomplete="off"></label>
             </div>
           </fieldset>
 
@@ -457,7 +473,7 @@
           </fieldset>
 
           <fieldset class="sensitive-fieldset">
-            <legend>8. 联系人资料（敏感，永不默认勾选）</legend>
+            <legend>8. 联系人资料（有可靠匹配时参与一键填写）</legend>
             <label>家庭成员（每行一人）<textarea id="profileFamilyMembersInput" rows="3" placeholder="姓名 | 关系 | 单位 | 职务 | 电话 | 政治面貌"></textarea></label>
             <label>紧急联系人（每行一人）<textarea id="profileEmergencyContactsInput" rows="3" placeholder="姓名 | 关系 | 电话 | 单位 | 地址"></textarea></label>
             <label>证明人 / 推荐人（每行一人）<textarea id="profileReferencesInput" rows="3" placeholder="姓名 | 关系 | 公司 | 职位 | 电话 | 邮箱"></textarea></label>

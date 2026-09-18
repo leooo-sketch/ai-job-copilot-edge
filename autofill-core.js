@@ -6,7 +6,7 @@
   "use strict";
 
   const PROFILE_KEY = "candidateAutofillProfile";
-  const PROFILE_SCHEMA_VERSION = 3;
+  const PROFILE_SCHEMA_VERSION = 4;
   const HIGH_CONFIDENCE = 0.88;
   const REVIEW_CONFIDENCE = 0.72;
 
@@ -15,28 +15,29 @@
     basics: {
       name: "", givenName: "", middleName: "", familyName: "", formerName: "",
       englishName: "", namePinyin: "", phoneCountryCode: "+86", phone: "", alternatePhone: "",
-      email: "", alternateEmail: "", wechat: "", url: "", github: "", linkedin: "",
-      currentCity: "", currentProvince: "", currentCountry: "", nativePlace: "",
-      address: "", postalCode: "", nationality: "", citizenship: "",
+      email: "", alternateEmail: "", wechat: "", url: "", portfolioUrl: "", github: "", linkedin: "",
+      currentCity: "", currentProvince: "", currentCountry: "", currentAddress: "", hometown: "", nativePlace: "",
+      address: "", postalCode: "", nationality: "", countryRegion: "", citizenship: "",
+      professionalQualifications: "",
       currentCompany: "", currentTitle: "", yearsOfExperience: ""
     },
     private: {
       idType: "", idNumber: "", idExpiryDate: "", passportNumber: "", passportExpiryDate: "",
-      birthDate: "", birthPlace: "", gender: "", ethnicity: "", healthStatus: "",
+      birthDate: "", age: "", birthPlace: "", gender: "", ethnicity: "", healthStatus: "", personalityAssessment: "", emergencyPhone: "",
       maritalStatus: "", politicalStatus: "", partyJoinDate: "", hukouLocation: "", hukouType: "",
       heightCm: "", weightKg: "", disabilityStatus: "", veteranStatus: ""
     },
     jobPreferences: {
       expectedRole: "", expectedJobFamily: "", expectedIndustry: "", expectedCities: "",
-      expectedSalaryMin: "", expectedSalaryMax: "", salaryPeriod: "月", currency: "CNY",
+      expectedSalaryMin: "", expectedSalaryMax: "", expectedSalaryText: "", salaryPeriod: "月", currency: "CNY",
       availableDate: "", employmentType: "", workMode: "", willingToRelocate: "",
       travelDomestic: "", travelInternational: "", acceptPartTime: "", acceptTemporary: "",
-      flexibleWork: "", source: "", referrerName: "", referrerEmployeeId: ""
+      flexibleWork: "", source: "", applicationMethod: "", referrerName: "", referrerEmployeeId: ""
     },
     eligibility: {
       workAuthorization: "", visaType: "", requiresSponsorship: "", nonCompete: "",
-      relativeAtCompany: "", relativeDetails: "", disciplinaryHistory: "", criminalHistory: "",
-      conflictOfInterest: "", canBackgroundCheck: ""
+      relativeAtCompany: "", friendOrRelativeAtCompany: "", relativeDetails: "", disciplinaryHistory: "", criminalHistory: "",
+      conflictOfInterest: "", canBackgroundCheck: "", plansPostgraduateExam: "", hasAcademicAdvisor: ""
     },
     education: [], work: [], internships: [], projects: [], research: [], campus: [], volunteer: [],
     skills: [], languages: [], certificates: [], awards: [], publications: [], patents: [],
@@ -50,8 +51,8 @@
 
   const RECORD_SCHEMAS = Object.freeze({
     education: ["institution", "schoolType", "college", "area", "majorCategory", "minor", "researchDirection", "studyType", "degreeType", "educationLevel", "startDate", "endDate", "graduationDate", "score", "scoreScale", "rank", "rankTotal", "educationType", "studentType", "admissionBatch", "overseasStudy", "status", "country", "city", "courses", "thesis", "advisor", "honors", "summary", "trainingMode", "unifiedAdmission"],
-    work: ["experienceType", "name", "department", "position", "employmentType", "jobFunction", "industry", "companyNature", "companySize", "startDate", "endDate", "current", "country", "city", "location", "teamSize", "directReports", "responsibilities", "achievements", "technologies", "leavingReason", "supervisorName", "supervisorTitle", "supervisorPhone", "salary", "salaryPeriod", "summary"],
-    internships: ["experienceType", "name", "department", "position", "employmentType", "jobFunction", "industry", "companyNature", "companySize", "startDate", "endDate", "current", "country", "city", "location", "teamSize", "directReports", "responsibilities", "achievements", "technologies", "leavingReason", "supervisorName", "supervisorTitle", "supervisorPhone", "salary", "salaryPeriod", "summary"],
+    work: ["experienceType", "name", "department", "position", "employmentType", "jobFunction", "industry", "companyNature", "companySize", "startDate", "endDate", "current", "country", "city", "location", "teamSize", "directReports", "reportingTo", "referenceName", "referenceContact", "responsibilities", "achievements", "technologies", "leavingReason", "supervisorName", "supervisorTitle", "supervisorPhone", "salary", "salaryPeriod", "summary"],
+    internships: ["experienceType", "name", "department", "position", "employmentType", "jobFunction", "industry", "companyNature", "companySize", "startDate", "endDate", "current", "country", "city", "location", "teamSize", "directReports", "reportingTo", "referenceName", "referenceContact", "responsibilities", "achievements", "technologies", "leavingReason", "supervisorName", "supervisorTitle", "supervisorPhone", "salary", "salaryPeriod", "summary"],
     projects: ["name", "type", "entity", "department", "role", "industry", "startDate", "endDate", "current", "country", "city", "location", "url", "keywords", "technologies", "methods", "teamSize", "customers", "background", "objective", "responsibilities", "deliverables", "achievements", "metrics", "challenges", "solution", "summary"],
     research: ["name", "institution", "role", "startDate", "endDate", "advisor", "methods", "achievements", "summary"],
     campus: ["organization", "role", "startDate", "endDate", "responsibilities", "achievements", "summary"],
@@ -88,17 +89,22 @@
     rule("basics.email", "邮箱", ["电子邮箱", "邮箱地址", "邮箱", "email address", "email"], { autocomplete: ["email"], types: ["email", "text"], excludes: ["备用", "紧急", "推荐人"] }),
     rule("basics.alternateEmail", "备用邮箱", ["备用邮箱", "其他邮箱", "alternate email", "secondary email"]),
     rule("basics.wechat", "微信", ["微信号", "微信", "wechat", "weixin"]),
-    rule("basics.url", "个人主页", ["个人网站", "个人主页", "作品集链接", "portfolio url", "personal website", "website"], { excludes: ["公司", "学校", "github", "linkedin"] }),
+    rule("basics.url", "个人主页", ["个人网站", "个人主页", "personal website", "website"], { excludes: ["公司", "学校", "github", "linkedin", "作品"] }),
+    rule("basics.portfolioUrl", "作品链接", ["作品链接", "作品地址", "作品集链接", "作品集地址", "portfolio url", "portfolio link"], { excludes: ["附件"] }),
     rule("basics.github", "GitHub", ["github", "github主页", "代码仓库"]),
     rule("basics.linkedin", "LinkedIn", ["linkedin", "领英", "linkedin profile"]),
-    rule("basics.currentCity", "现居城市", ["现居住城市", "现居城市", "当前城市", "居住城市", "现所在地", "current city", "city of residence"], { excludes: ["籍贯", "户口", "期望", "项目"] }),
+    rule("basics.currentCity", "现居城市", ["现居住城市", "现居住地", "现居城市", "当前城市", "居住城市", "现所在地", "current city", "city of residence"], { excludes: ["籍贯", "户口", "期望", "项目"] }),
     rule("basics.currentProvince", "现居省份", ["现居省份", "当前省份", "居住省份", "state/province"]),
     rule("basics.currentCountry", "现居国家", ["现居国家", "当前国家", "居住国家", "country of residence"]),
+    rule("basics.currentAddress", "现居住地址", ["现居住地址", "现住址", "当前居住地址", "居住地址", "residential address"], { excludes: ["通讯", "邮寄", "联系", "学校", "紧急"] }),
+    rule("basics.hometown", "家乡", ["家乡", "故乡", "hometown"], { excludes: ["户口", "户籍"] }),
     rule("basics.nativePlace", "籍贯", ["籍贯", "原籍", "native place", "place of origin"], { excludes: ["户口"] }),
-    rule("basics.address", "通讯地址", ["通讯地址", "联系地址", "居住地址", "详细地址", "mailing address", "street address"], { excludes: ["紧急", "家庭"] }),
+    rule("basics.address", "通讯地址", ["通讯地址", "联系地址", "邮寄地址", "通信地址", "mailing address", "street address"], { excludes: ["紧急", "家庭", "现居"] }),
     rule("basics.postalCode", "邮编", ["邮政编码", "邮编", "zip code", "postal code"]),
     rule("basics.nationality", "国籍", ["国籍", "nationality"]),
+    rule("basics.countryRegion", "国家/地区", ["国家/地区", "所属国家地区", "country/region"], { excludes: ["学校", "项目", "居住", "教育经历", "工作经历", "实习经历"] }),
     rule("basics.citizenship", "公民身份", ["公民身份", "citizenship"]),
+    rule("basics.professionalQualifications", "职称/职业资格证书", ["职称/职业资格证书", "职称职业资格证书", "职业资格证书", "专业技术职称", "职称", "professional qualification"], { excludes: ["证件"] }),
     rule("basics.currentCompany", "当前公司", ["目前公司", "当前公司", "现任雇主", "current company", "current employer"]),
     rule("basics.currentTitle", "当前职位", ["当前职位", "现任职位", "当前岗位", "current title", "current position"]),
     rule("basics.yearsOfExperience", "工作年限", ["工作年限", "工作经验年限", "总工作年限", "years of experience"]),
@@ -109,6 +115,7 @@
     rule("jobPreferences.expectedCities", "期望城市", ["期望城市", "意向城市", "期望工作地点", "工作地点意向", "preferred location", "desired location"], { excludes: ["现居", "籍贯", "户口"] }),
     rule("jobPreferences.expectedSalaryMin", "期望最低薪资", ["期望最低薪资", "最低期望薪资", "minimum expected salary"]),
     rule("jobPreferences.expectedSalaryMax", "期望最高薪资", ["期望最高薪资", "最高期望薪资", "maximum expected salary"]),
+    rule("jobPreferences.expectedSalaryText", "期望薪资（原文）", ["期望薪资", "期望薪酬", "期望工资", "expected salary"], { excludes: ["最低", "最高", "区间下限", "区间上限"] }),
     rule("jobPreferences.salaryPeriod", "薪资周期", ["薪资周期", "薪资类型", "salary period"]),
     rule("jobPreferences.currency", "薪资币种", ["薪资币种", "货币", "currency"]),
     rule("jobPreferences.availableDate", "到岗时间", ["到岗时间", "可入职日期", "最快到岗", "available date", "availability date"]),
@@ -120,7 +127,8 @@
     rule("jobPreferences.acceptPartTime", "接受兼职", ["是否接受兼职", "接受兼职", "part time"]),
     rule("jobPreferences.acceptTemporary", "接受临时岗位", ["是否接受临时岗位", "临时派遣", "temporary assignment"]),
     rule("jobPreferences.flexibleWork", "弹性工作", ["是否接受弹性工作", "弹性办公", "flexible work"]),
-    rule("jobPreferences.source", "申请来源", ["获取招聘信息来源", "招聘信息来源", "信息来源", "申请来源", "如何得知", "candidate source", "source"]),
+    rule("jobPreferences.source", "申请来源", ["了解集团的途径", "了解公司的途径", "了解本公司的途径", "获取招聘信息来源", "招聘信息来源", "信息来源", "申请来源", "如何得知", "candidate source", "source"]),
+    rule("jobPreferences.applicationMethod", "求职方式", ["求职方式", "应聘方式", "申请方式", "application method"], { excludes: ["招聘信息来源"] }),
     rule("jobPreferences.referrerName", "内推人", ["内推人姓名", "推荐人姓名", "referrer name"]),
     rule("jobPreferences.referrerEmployeeId", "内推人工号", ["内推人工号", "推荐人员工号", "referrer employee id"]),
 
@@ -130,10 +138,13 @@
     rule("private.passportNumber", "护照号码", ["护照号码", "护照号", "passport number"], { sensitive: true }),
     rule("private.passportExpiryDate", "护照有效期", ["护照有效期", "passport expiry"], { sensitive: true }),
     rule("private.birthDate", "出生日期", ["出生日期", "出生年月", "生日", "date of birth", "birth date"], { sensitive: true }),
+    rule("private.age", "年龄", ["年龄", "周岁", "age"], { sensitive: true, excludes: ["工作年限", "工龄"] }),
     rule("private.birthPlace", "出生地", ["出生地", "出生地点", "place of birth"], { sensitive: true }),
     rule("private.gender", "性别", ["性别", "gender", "sex"], { sensitive: true }),
     rule("private.ethnicity", "民族", ["民族", "ethnicity", "ethnic group", "race"], { sensitive: true }),
     rule("private.healthStatus", "健康状况", ["健康状况", "身体状况", "health status"], { sensitive: true }),
+    rule("private.personalityAssessment", "MBTI/PDP 性格测评结果", ["MBTI或PDP性格测评结果", "MBTI/PDP性格测评结果", "MBTI性格类型", "PDP性格测评结果", "性格测评结果", "personality assessment"], { sensitive: true }),
+    rule("private.emergencyPhone", "紧急联系电话", ["紧急联系电话", "紧急联系手机", "紧急联系电话号码", "emergency phone"], { sensitive: true }),
     rule("private.maritalStatus", "婚姻状况", ["婚姻状况", "婚姻状态", "marital status"], { sensitive: true }),
     rule("private.politicalStatus", "政治面貌", ["政治面貌", "政治身份", "political status"], { sensitive: true }),
     rule("private.partyJoinDate", "入党时间", ["加入党组织时间", "入党时间", "party join date"], { sensitive: true }),
@@ -149,10 +160,13 @@
     rule("eligibility.requiresSponsorship", "需要签证担保", ["需要签证担保", "是否需要sponsorship", "requires sponsorship"], { sensitive: true }),
     rule("eligibility.nonCompete", "竞业限制", ["竞业限制", "竞业协议", "non-compete"]),
     rule("eligibility.relativeAtCompany", "亲属任职", ["亲属在本公司任职", "是否有亲属", "relative at company"], { sensitive: true }),
+    rule("eligibility.friendOrRelativeAtCompany", "亲友在公司任职", ["是否有亲友在公司任职", "亲友在公司任职", "是否有亲友在集团任职", "friends or relatives at company"], { sensitive: true }),
     rule("eligibility.disciplinaryHistory", "处分记录", ["处分记录", "纪律处分", "disciplinary history"], { sensitive: true }),
     rule("eligibility.criminalHistory", "犯罪记录", ["犯罪记录", "刑事记录", "criminal history"], { sensitive: true }),
     rule("eligibility.conflictOfInterest", "利益冲突", ["利益冲突", "conflict of interest"], { sensitive: true }),
     rule("eligibility.canBackgroundCheck", "接受背调", ["是否接受背景调查", "接受背调", "background check"]),
+    rule("eligibility.plansPostgraduateExam", "是否准备考研", ["是否准备考研", "是否计划考研", "准备考研", "计划考研"], { excludes: ["已考上"] }),
+    rule("eligibility.hasAcademicAdvisor", "是否有导师", ["是否有导师", "是否已确定导师", "有无导师"], { excludes: ["导师姓名", "实习导师"] }),
 
     rule("education", "教育经历（整段）", ["教育经历", "教育背景", "学习经历", "education experience", "education history"], { types: ["textarea"] }),
     collectionRule("education.$.institution", "学校", ["学校全称", "毕业院校", "学校名称", "就读院校", "院校名称", "institution", "university", "college"], "education", { sections: ["教育信息", "教育经历", "教育背景", "education"] }),
@@ -167,8 +181,8 @@
     collectionRule("education.$.educationLevel", "学历", ["最高学历", "学历", "education level"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["性质", "学习形式"] }),
     collectionRule("education.$.startDate", "入学时间", ["入学时间", "教育开始时间", "就读开始", "start date"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["工作", "项目"] }),
     collectionRule("education.$.endDate", "毕业时间", ["毕业届次", "毕业时间", "教育结束时间", "预计毕业时间", "graduation date", "graduation year", "end date"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["工作", "项目"] }),
-    collectionRule("education.$.score", "GPA/成绩", ["平均绩点", "绩点", "gpa", "平均成绩", "综合成绩"], "education", { sections: ["教育信息", "教育经历", "education"] }),
-    collectionRule("education.$.scoreScale", "成绩满分", ["绩点满分", "成绩满分", "gpa scale"], "education", { sections: ["教育信息", "教育经历", "education"] }),
+    collectionRule("education.$.score", "GPA/成绩", ["平均绩点或成绩", "平均绩点/成绩", "平均绩点", "绩点", "gpa", "平均成绩", "综合成绩"], "education", { sections: ["教育信息", "教育经历", "education"] }),
+    collectionRule("education.$.scoreScale", "成绩满分", ["满分绩点或成绩", "满分绩点/成绩", "绩点满分", "成绩满分", "gpa scale"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.rank", "排名", ["专业排名", "班级排名", "年级排名", "院系排名", "成绩排名", "成绩院系中排名", "成绩在院系中排名", "rank"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.rankTotal", "排名总人数", ["专业总人数", "年级总人数", "排名总人数", "rank total"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.educationType", "受教育类型", ["最高学历学习形式", "受教育类型", "学历性质", "学习形式", "教育类型", "education type"], "education", { sections: ["教育信息", "教育经历", "education"], excludes: ["培养"] }),
@@ -178,7 +192,7 @@
     collectionRule("education.$.admissionBatch", "录取批次", ["录取批次", "招生批次", "admission batch"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.overseasStudy", "海外学习经历", ["是否在海外学习", "是否有海外学习经历", "海外学习经历", "海外留学经历", "studied abroad", "overseas study"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.status", "就读状态", ["就读状态", "毕业状态", "在读状态", "education status"], "education", { sections: ["教育信息", "教育经历", "education"] }),
-    collectionRule("education.$.city", "学校所在地", ["学校所在地", "院校城市", "就读城市", "school location"], "education", { sections: ["教育信息", "教育经历", "education"] }),
+    collectionRule("education.$.city", "学校所在地", ["最高学历院校地点", "院校地点", "学校所在地", "院校城市", "就读城市", "school location"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.courses", "主修课程", ["主修课程", "专业课程", "核心课程", "主要课程", "所学课程", "courses"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.thesis", "论文题目", ["毕业论文", "论文题目", "thesis"], "education", { sections: ["教育信息", "教育经历", "education"] }),
     collectionRule("education.$.advisor", "导师", ["导师", "指导老师", "advisor"], "education", { sections: ["教育信息", "教育经历", "education"] }),
@@ -186,7 +200,7 @@
     collectionRule("education.$.summary", "教育经历描述", ["教育经历描述", "在校经历", "教育经历概述", "education summary"], "education", { sections: ["教育信息", "教育经历", "education"] }),
 
     rule("work", "工作经历（整段）", ["工作经历", "工作经验", "职业经历", "任职经历", "work experience", "employment history"], { types: ["textarea"], excludes: ["实习"] }),
-    collectionRule("work.$.name", "工作单位", ["公司全称", "公司名称", "工作单位", "任职单位", "雇主", "company", "employer"], "work", { sections: ["工作经历", "工作经验", "职业经历", "work"], excludes: ["实习", "目标公司", "亲属"] }),
+    collectionRule("work.$.name", "工作单位", ["企业名称", "公司全称", "公司名称", "工作单位", "任职单位", "雇主", "company", "employer"], "work", { sections: ["工作经历", "工作经验", "职业经历", "work"], excludes: ["实习", "目标公司", "亲属"] }),
     collectionRule("work.$.department", "工作部门", ["所在部门", "部门名称", "工作部门", "department"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["实习"] }),
     collectionRule("work.$.position", "工作职位", ["职位名称", "岗位名称", "工作职位", "担任职务", "job title", "position"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["期望", "项目", "实习"] }),
     collectionRule("work.$.employmentType", "工作性质", ["工作性质", "任职类型", "雇佣类型", "employment type"], "work", { sections: ["工作经历", "工作经验", "work"] }),
@@ -200,6 +214,9 @@
     collectionRule("work.$.city", "工作城市", ["工作地点", "工作城市", "所在城市", "work location"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["期望", "现居", "实习"] }),
     collectionRule("work.$.teamSize", "团队规模", ["团队规模", "团队人数", "team size"], "work", { sections: ["工作经历", "工作经验", "work"] }),
     collectionRule("work.$.directReports", "下属人数", ["下属人数", "管理人数", "direct reports"], "work", { sections: ["工作经历", "工作经验", "work"] }),
+    collectionRule("work.$.reportingTo", "职位汇报对象", ["职位汇报（给谁）", "职位汇报给谁", "汇报给谁", "汇报关系", "reports to"], "work", { sections: ["工作经历", "工作经验", "work"] }),
+    collectionRule("work.$.referenceName", "工作证明人姓名", ["工作证明人姓名", "证明人姓名", "reference name"], "work", { sections: ["工作经历", "工作经验", "work"], sensitive: true }),
+    collectionRule("work.$.referenceContact", "工作证明人联系方式", ["工作证明人联系方式", "证明人联系方式", "证明人联系电话", "reference contact"], "work", { sections: ["工作经历", "工作经验", "work"], sensitive: true }),
     collectionRule("work.$.responsibilities", "工作职责", ["工作职责", "工作内容", "工作描述", "岗位职责", "主要职责", "职责描述", "description", "responsibilities"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["实习", "项目"] }),
     collectionRule("work.$.achievements", "工作成果", ["工作成果", "主要业绩", "关键成果", "工作业绩", "achievements"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["实习", "项目"] }),
     collectionRule("work.$.technologies", "工作技能/工具", ["使用工具", "工作技能", "技术栈", "technologies"], "work", { sections: ["工作经历", "工作经验", "work"] }),
@@ -210,7 +227,7 @@
     collectionRule("work.$.summary", "工作概述", ["工作概述", "经历概述", "工作经验描述", "experience summary"], "work", { sections: ["工作经历", "工作经验", "work"], excludes: ["实习", "项目"] }),
 
     rule("internships", "实习经历（整段）", ["实习经历", "实习经验", "internship experience", "internship history"], { types: ["textarea"] }),
-    collectionRule("internships.$.name", "实习单位", ["实习单位", "实习公司", "工作单位", "单位名称", "公司名称", "internship company", "employer"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["目标公司", "亲属"] }),
+    collectionRule("internships.$.name", "实习单位", ["企业名称", "实习单位", "实习公司", "工作单位", "单位名称", "公司名称", "internship company", "employer"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["目标公司", "亲属"] }),
     collectionRule("internships.$.department", "实习部门", ["实习部门", "所在部门", "部门名称", "department"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
     collectionRule("internships.$.position", "实习职位", ["实习职位", "实习岗位", "职位名称", "职位", "职务", "岗位名称", "internship title", "position"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["期望", "项目"] }),
     collectionRule("internships.$.employmentType", "实习性质", ["实习性质", "实习类型", "全职实习", "兼职实习", "employment type"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
@@ -223,7 +240,10 @@
     collectionRule("internships.$.current", "是否仍在实习", ["是否仍在实习", "是否在职", "至今", "current internship"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
     collectionRule("internships.$.city", "实习城市", ["实习地点", "实习城市", "工作地点", "所在城市", "internship location"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["期望", "现居"] }),
     collectionRule("internships.$.teamSize", "实习团队规模", ["团队规模", "团队人数", "team size"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
-    collectionRule("internships.$.responsibilities", "实习职责", ["工作职责", "工作内容", "实习内容", "实习描述", "实习职责", "岗位职责", "主要职责", "description", "responsibilities"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["项目"] }),
+    collectionRule("internships.$.reportingTo", "实习汇报对象", ["职位汇报（给谁）", "职位汇报给谁", "汇报给谁", "汇报关系", "reports to"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
+    collectionRule("internships.$.referenceName", "实习证明人姓名", ["实习证明人姓名", "证明人姓名", "reference name"], "internships", { sections: ["实习经历", "实习经验", "internship"], sensitive: true }),
+    collectionRule("internships.$.referenceContact", "实习证明人联系方式", ["实习证明人联系方式", "证明人联系方式", "证明人联系电话", "reference contact"], "internships", { sections: ["实习经历", "实习经验", "internship"], sensitive: true }),
+    collectionRule("internships.$.responsibilities", "实习职责", ["工作职责", "工作内容", "工作描述", "实习内容", "实习描述", "实习职责", "岗位职责", "主要职责", "description", "responsibilities"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["项目"] }),
     collectionRule("internships.$.achievements", "实习成果", ["实习成果", "实习业绩", "主要成果", "achievements"], "internships", { sections: ["实习经历", "实习经验", "internship"], excludes: ["项目"] }),
     collectionRule("internships.$.technologies", "实习技能/工具", ["使用工具", "实习技能", "技术栈", "technologies"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
     collectionRule("internships.$.supervisorName", "实习导师", ["实习导师", "直属上级", "主管姓名", "supervisor"], "internships", { sections: ["实习经历", "实习经验", "internship"] }),
@@ -268,9 +288,9 @@
     collectionRule("skills.$.name", "技能名称", ["技能名称", "技能项", "skill name"], "skills", { sections: ["技能", "skills"] }),
     collectionRule("skills.$.level", "技能水平", ["熟练程度", "技能水平", "proficiency"], "skills", { sections: ["技能", "skills"] }),
     rule("languages", "语言能力", ["语言能力", "外语水平", "语言技能", "languages", "language proficiency"]),
-    collectionRule("languages.$.language", "语言", ["语种", "语言名称", "language"], "languages", { sections: ["语言能力", "languages"] }),
-    collectionRule("languages.$.level", "语言水平", ["语言水平", "熟练程度", "proficiency level"], "languages", { sections: ["语言能力", "languages"] }),
-    rule("certificates", "证书", ["资格证书", "技能证书", "证书", "certificates", "certifications"], { excludes: ["证件"] }),
+    collectionRule("languages.$.language", "语言", ["语言", "语种", "语言名称", "language"], "languages", { sections: ["语言能力", "languages"] }),
+    collectionRule("languages.$.level", "语言水平", ["精通程度", "掌握程度", "语言水平", "熟练程度", "proficiency level"], "languages", { sections: ["语言能力", "languages"] }),
+    rule("certificates", "证书", ["资格证书", "技能证书", "证书", "certificates", "certifications"], { excludes: ["证件", "职称", "职业资格"] }),
     collectionRule("certificates.$.name", "证书名称", ["证书名称", "资格名称", "certificate name", "license name"], "certificates", { sections: ["证书", "资格", "certifications"] }),
     collectionRule("certificates.$.issuer", "发证机构", ["发证机构", "颁发机构", "issuer"], "certificates", { sections: ["证书", "资格", "certifications"] }),
     collectionRule("certificates.$.date", "证书获得时间", ["获得时间", "获取时间", "取得时间", "发证日期", "证书日期", "issue date"], "certificates", { sections: ["证书", "资格", "certifications"] }),
@@ -283,7 +303,7 @@
     rule("publications", "论文发表", ["论文发表", "出版物", "publications"]),
     rule("patents", "专利", ["专利", "patents"]),
     collectionRule("emergencyContacts.$.name", "紧急联系人", ["紧急联系人姓名", "紧急联系人", "emergency contact name"], "emergencyContacts", { sensitive: true, sections: ["紧急联系人", "emergency contact"] }),
-    collectionRule("emergencyContacts.$.phone", "紧急联系人电话", ["紧急联系人电话", "紧急联系电话", "emergency contact phone"], "emergencyContacts", { sensitive: true, sections: ["紧急联系人", "emergency contact"] }),
+    collectionRule("emergencyContacts.$.phone", "紧急联系人电话", ["紧急联系人电话", "emergency contact phone"], "emergencyContacts", { sensitive: true, sections: ["紧急联系人", "emergency contact"] }),
     collectionRule("references.$.name", "证明人", ["证明人姓名", "推荐人姓名", "reference name"], "references", { sensitive: true, sections: ["证明人", "推荐人", "references"] }),
     collectionRule("references.$.phone", "证明人电话", ["证明人电话", "推荐人电话", "reference phone"], "references", { sensitive: true, sections: ["证明人", "推荐人", "references"] }),
     rule("narratives.selfEvaluation", "自我评价", ["自我评价", "个人评价", "个人总结", "自我介绍", "self evaluation", "professional summary"]),
@@ -434,7 +454,8 @@
     if (!candidates.length || candidates[0].score < REVIEW_CONFIDENCE) return null;
     const best = candidates[0];
     const second = candidates[1];
-    return { ...best, ambiguous: Boolean(second && best.score - second.score < 0.08), alternative: second?.rule?.label || "" };
+    const exactLabelWins = best.reason === "字段标签精确匹配" && second?.reason !== "字段标签精确匹配";
+    return { ...best, ambiguous: Boolean(second && !exactLabelWins && best.score - second.score < 0.08), alternative: second?.rule?.label || "" };
   }
 
   function getPathValue(object, path) { return String(path || "").split(".").reduce((value, key) => value?.[key], object); }
@@ -451,8 +472,8 @@
   function canonicalPath(matchedRule, occurrence) { return matchedRule.collection ? matchedRule.path.replace("$", String(occurrence)) : matchedRule.path; }
   function isSensitivePath(path) {
     return /^(?:private|familyMembers|emergencyContacts|references)\./.test(path)
-      || /^(?:work|internships)\.\d+\.(?:supervisorPhone|salary)$/.test(path)
-      || /^(?:eligibility\.(?:workAuthorization|visaType|requiresSponsorship|relativeAtCompany|relativeDetails|disciplinaryHistory|criminalHistory|conflictOfInterest))/.test(path);
+      || /^(?:work|internships)\.\d+\.(?:supervisorPhone|salary|referenceName|referenceContact)$/.test(path)
+      || /^(?:eligibility\.(?:workAuthorization|visaType|requiresSponsorship|relativeAtCompany|friendOrRelativeAtCompany|relativeDetails|disciplinaryHistory|criminalHistory|conflictOfInterest))/.test(path);
   }
 
   function resolvePlanValue(profile, matchedRule, occurrence, fieldContext) {
@@ -460,6 +481,10 @@
       let canonicalKey = matchedRule.path;
       let value = resolveValue(profile, matchedRule, occurrence);
       let crossCategory = false;
+      if (matchedRule.path === "private.emergencyPhone" && !value && profile.emergencyContacts.length === 1 && profile.emergencyContacts[0].phone) {
+        canonicalKey = "emergencyContacts.0.phone";
+        value = profile.emergencyContacts[0].phone;
+      }
       if (matchedRule.path === "internships" && !value && fieldContext.includes("实习") && profile.automationPolicy.allowWorkAsInternship && profile.work.length) {
         canonicalKey = "work";
         value = formatCollection(profile.work);
@@ -567,7 +592,10 @@
       const alignedRecord = repeatGroupKey ? repeatSourceIndices.get(repeatGroupKey) : null;
       const explicitOccurrence = alignedRecord ? alignedRecord.sourceIndex
         : repeatGroupKey ? Math.max(0, Number(field.repeatIndex)) : null;
-      const personalEducation = match.rule.collection === "education" && !field.repeatKind && /最高学历|毕业届次/.test(field.label || "");
+      const personalEducation = match.rule.collection === "education" && !field.repeatKind && (
+        /最高学历|毕业届次/.test(field.label || "")
+        || /个人信息|基本信息|申请信息/.test(field.section || "") && /学习形式|学历|学位|毕业院校|院校地点|毕业时间|毕业日期|专业|平均绩点|平均成绩|满分绩点|满分成绩/.test(field.label || "")
+      );
       const occurrence = personalEducation ? highestEducationIndex(profile) : match.rule.collection ? (explicitOccurrence ?? (occurrences[counterKey] || 0)) : 0;
       if (match.rule.collection) occurrences[counterKey] = occurrence + 1;
       const fieldContext = normalizeText(`${field.section || ""} ${field.label || ""}`);
@@ -589,7 +617,7 @@
       if (base.currentValue) return { ...mapped, status: "existing", reason: "网页中已有内容，不会覆盖" };
       if (crossWorkToInternship && !profile.automationPolicy.allowWorkAsInternship) return { ...base, status: "unmapped", reason: "资料策略不允许把工作经历映射到实习栏目" };
       if (!value) return { ...mapped, status: "missing", reason: "已识别字段，但资料库中尚无对应内容" };
-      if (crossWorkToInternship || resolved.summaryFallback || match.ambiguous || match.score < HIGH_CONFIDENCE || mapped.sensitive) return { ...mapped, status: "review", reason: mapped.sensitive ? `${mapped.reason}；敏感信息必须由你勾选确认` : `${mapped.reason}；请人工确认` };
+      if (crossWorkToInternship || resolved.summaryFallback || match.ambiguous || match.score < HIGH_CONFIDENCE) return { ...mapped, status: "review", reason: `${mapped.reason}；请人工确认` };
       return { ...mapped, status: "ready", selected: true };
     });
   }
@@ -619,8 +647,8 @@
     if (crossCategory && !profile.automationPolicy.allowWorkAsInternship) return item;
     const sensitive = isSensitivePath(sourcePath);
     return { ...item, canonicalKey: sourcePath, canonicalLabel: profilePathLabel(profile, sourcePath), value, confidence: 1,
-      status: sensitive || crossCategory ? "review" : "ready", selected: !sensitive && !crossCategory, sensitive, crossCategory,
-      manualMapped: true, reason: `${remembered ? "按此网站记住的字段对应关系取值" : "你已从资料库指定填充内容"}${crossCategory ? "；真实工作经历用于实习栏目，需勾选确认" : ""}${sensitive ? "；敏感信息需勾选确认" : ""}` };
+      status: crossCategory ? "review" : "ready", selected: !crossCategory, sensitive, crossCategory,
+      manualMapped: true, reason: `${remembered ? "按此网站记住的字段对应关系取值" : "你已从资料库指定填充内容"}${crossCategory ? "；真实工作经历用于实习栏目，需勾选确认" : ""}` };
   }
 
   function fieldMemoryKey(url, field) {
@@ -692,7 +720,7 @@
       const reason = crossWorkToInternship
         ? `AI 跨栏目建议：表单未提供工作经历入口，拟把真实工作经历填入实习经历；${aiReason}。请确认该公司的栏目口径。`
         : `AI 语义复核：${aiReason}`;
-      const status = sensitive || crossWorkToInternship || confidence < HIGH_CONFIDENCE ? "review" : "ready";
+      const status = crossWorkToInternship || confidence < HIGH_CONFIDENCE ? "review" : "ready";
       Object.assign(item, {
         canonicalKey: sourcePath, canonicalLabel: cleanString(decision.sourceLabel, 120) || sourcePath,
         value, confidence, sensitive, status, selected: status === "ready", reason, aiSuggested: true,

@@ -135,9 +135,9 @@ test("autofill maps representative Chinese application fields conservatively", (
   assert.equal(byId.pinyin.canonicalKey, "basics.namePinyin");
   assert.equal(byId.city.value, "上海");
   assert.equal(byId.hukou.canonicalKey, "private.hukouLocation");
-  assert.equal(byId.hukou.status, "review");
+  assert.equal(byId.hukou.status, "ready");
   assert.equal(byId.id.sensitive, true);
-  assert.equal(byId.id.selected, false);
+  assert.equal(byId.id.selected, true);
   assert.equal(byId["school-1"].value, "示例大学");
   assert.equal(byId["school-2"].value, "第二大学");
   assert.equal(byId["major-2"].value, "环境工程");
@@ -165,7 +165,7 @@ test("resume extraction only suggests verifiable fields and never infers sensiti
   assert.equal(result.profile.private.healthStatus, "");
 });
 
-test("profile v3 migrates legacy data, splits internships, and covers enterprise sections", () => {
+test("profile v4 migrates legacy data, splits internships, and covers enterprise sections", () => {
   const profile = autofillCore.sanitizeProfile({
     schemaVersion: 2,
     basics: { name: "测试用户", expectedRole: "AI产品经理", expectedCity: "上海" },
@@ -176,7 +176,7 @@ test("profile v3 migrates legacy data, splits internships, and covers enterprise
       { experienceType: "实习", name: "示例实习公司", position: "产品实习生" }
     ]
   });
-  assert.equal(profile.schemaVersion, 3);
+  assert.equal(profile.schemaVersion, 4);
   assert.equal(profile.jobPreferences.expectedRole, "AI产品经理");
   assert.equal(profile.jobPreferences.expectedCities, "上海");
   assert.equal(profile.skills[0].name, "SQL");
@@ -330,8 +330,25 @@ test("autofill implementation cannot submit forms or overwrite existing values b
   assert.doesNotMatch(content, /\.submit\s*\(/);
   assert.doesNotMatch(content, /requestSubmit\s*\(/);
   assert.match(content, /检测到已有内容，未覆盖/);
-  assert.match(panel, /扩展不会提交表单/);
+  assert.match(panel, /未提交表单/);
   assert.match(panel, /item\.sensitive/);
+  assert.doesNotMatch(panel, /敏感字段。确认仅在当前网申页面填写/);
+});
+
+test("one-click autofill includes known sensitive values without a second dialog", () => {
+  const html = fs.readFileSync(path.join(root, "sidepanel.html"), "utf8");
+  const panel = fs.readFileSync(path.join(root, "sidepanel.js"), "utf8");
+  const plan = autofillCore.buildFillPlan({ private: { ethnicity: "汉族", birthDate: "2000-01-01" } }, [
+    { fieldId: "ethnicity", label: "民族", section: "个人信息" },
+    { fieldId: "birth", label: "出生日期", section: "个人信息" },
+    { fieldId: "unknown", label: "紧急联系人", section: "个人信息" }
+  ]);
+  assert.ok(plan.slice(0, 2).every((item) => item.status === "ready" && item.selected && item.sensitive));
+  assert.equal(plan[2].selected, false);
+  assert.match(html, /id="scanAndFillButton"/);
+  assert.match(panel, /await scanApplicationForm\(\)/);
+  assert.match(panel, /await fillSelectedAutofillFields\(\)/);
+  assert.doesNotMatch(panel, /sensitiveCount\s*&&\s*!confirm/);
 });
 
 test("nearby semantic evidence resolves generic placeholders and position keywords", () => {
@@ -370,7 +387,7 @@ test("content agent supports framework choices and asynchronous combobox confirm
   assert.match(content, /\[role='radio'\]/);
   assert.match(content, /collectChoiceGroup/);
   assert.match(content, /choiceSynonym/);
-  assert.match(content, /waitForSelectOptions\(wrapper, 1800[,)]/);
+  assert.match(content, /waitForSelectOptions\(wrapper, 1000[,)]/);
   assert.match(content, /key: "ArrowDown"/);
   assert.match(content, /key: "Enter"/);
   assert.match(content, /setNativeInputValue\(input, originalValue\)/);

@@ -10,7 +10,7 @@
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-6654e8)
 ![Microsoft Edge](https://img.shields.io/badge/Microsoft%20Edge-Side%20Panel-0b84ff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2fa978.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-32%20passing-2fa978)](#development)
+[![Tests](https://img.shields.io/badge/tests-41%20passing-2fa978)](#development)
 
 [简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md)
 
@@ -32,7 +32,9 @@ No hosted backend. No CAPTCHA bypass. No hidden application decisions.
 
 | Release | Classification | What it represents |
 |---|---|---|
-| `v0.6.1` | Latest version | Legacy dropdown compatibility, education synonyms and separate training/admission fields; [upgrade notes](docs/AUTOFILL-0.6.1.md) |
+| `v0.8.0` | Latest version | Expanded local profile v4 for personal details and employer-specific questions, with field-recognition fixes; [changelog](CHANGELOG.md) |
+| `v0.7.0` | One-click autofill | One-click scan-and-fill of confidently mapped saved data, including sensitive fields, plus searchable custom dropdowns; [changelog](CHANGELOG.md) |
+| `v0.6.1` | Dropdown compatibility | Legacy dropdown compatibility, education synonyms and separate training/admission fields; [upgrade notes](docs/AUTOFILL-0.6.1.md) |
 | `v0.6.0` | Autofill improvements | Split dates, validation-label cleanup, verified selections, profile mapping corrections and award/certificate cards; [upgrade notes](docs/AUTOFILL-0.6.md) |
 | `v0.5.0` | Enhanced release | Fuzzy field recognition, DOM-based repeat-card grouping, confirmed async job suggestions, and native/ARIA/framework choice controls |
 | `v0.1.0` | Initial public release | Edge side panel, supported job-site adapters, AI matching, review queue, and guarded application actions |
@@ -43,8 +45,8 @@ Versions `0.2.0` through `0.4.0` are documented development milestones included 
 ## Features
 
 - **Three-stage workflow** — collect, AI-match, then review and apply.
-- **Reliable application autofill** — scan any normal HTTP(S) application page, review a field-level plan, then fill only what you selected.
-- **Comprehensive profile v3** — education, work, internships, and projects are separate repeatable cards with dedicated fields for common enterprise application forms.
+- **Reliable application autofill** — one click scans and fills confidently matched saved data on a normal HTTP(S) application page, or you can preview and customize the field-level plan first.
+- **Comprehensive profile v4** — broader personal details, preferences, and employer-specific answers; education, work, internships, and projects remain separate repeatable cards.
 - **Dynamic section preparation** — safely exposes “add education/work/internship/project” cards before scanning, then keeps each page card aligned with one source record.
 - **Anchor-aware record alignment** — existing school, company, or project names select the correct local record before other fields are planned; common hidden framework selects and readonly date controls are included.
 - **DOM card isolation** — derives each repeat record from its real page container and labels previews with the source title, avoiding one experience being spread over multiple cards.
@@ -55,7 +57,7 @@ Versions `0.2.0` through `0.4.0` are documented development milestones included 
 - **Qwen semantic review** — improve custom-field mappings without allowing the model to invent values; every fill value must resolve to an existing profile path.
 - **Cross-section guardrail** — a real work record may be suggested for an internship-only form section, but stays labeled as work and is never preselected.
 - **Conservative matching** — label, placeholder, HTML autocomplete, section, type, exclusions, confidence, and ambiguity checks work together.
-- **Safety by default** — existing values are never overwritten; sensitive values are never preselected; file inputs and submit buttons are never automated.
+- **Safety by default** — saved sensitive values participate in explicit one-click autofill when confidently matched; existing values are never overwritten, missing facts are never invented, and file inputs and submit buttons are never automated.
 - **Hard filters first** — title, city, salary, company blacklist, and job blacklist.
 - **Resume-aware scoring** — score, summary, strengths, gaps, risks, and a truthful greeting.
 - **Multiple model options** — Qwen through Alibaba Cloud Model Studio, DeepSeek, OpenAI, or a local OpenAI-compatible endpoint.

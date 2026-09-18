@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2026-09-18
+
+- Expand the local structured profile to schema v4 while retaining the existing storage key and migrating v3 answers without loss. New fields cover age, hometown, current address, country/region, qualifications, expected salary, application method, MBTI/PDP, emergency phone, postgraduate-exam/advisor answers, and friend/relative-at-company declarations.
+- Add separate internship/work reporting-to and reference-contact fields. Improve mapping for highest-education scores and graduation dates in personal-information sections, without conflating a current address with a mailing address or an internship with employment.
+- Give an exact field-label match priority over a weaker substring match so confidently identified fields are not incorrectly held for review.
+- Add tests for profile migration, editor save/reload, and representative field mappings from the supplied application-form screenshots. Screenshot example values are not imported into the extension.
+- Keep existing guardrails: no guessed values, no overwriting prefilled answers, no automatic file upload or application submission. A profile export before upgrading is recommended.
+
+## [0.7.0] - 2026-09-18
+
+- Add **一键扫描并填写**: one deliberate click scans the current application and fills every confidently mapped value already saved in the local profile, including sensitive fields, without an extra per-field confirmation dialog. The extension still never submits the application, chooses files, guesses missing facts, or overwrites prefilled values.
+- Extend custom-select handling to generic readonly controls, searchable portal listboxes and unclassified list items; scope candidate options to the active popup, select a unique label match, then verify the page retained the chosen value.
+- Add aliases for 现居住地 and 最高学历院校地点; map 学习形式 in a personal-information block to the highest education record.
+- Retain review-only handling for ambiguous/low-confidence mappings and work-as-internship cross-column suggestions. One-click mode excludes these until explicitly selected.
+- Add synthetic DOM regression coverage for the dropdown shapes above. These tests do not certify every recruitment site's actual markup, cascading geography widget, virtualized menu, or custom calendar.
+
 ## [0.6.1] - 2026-09-14
 
 - Support legacy Ant Design dropdown items and selected-value labels; exclude disabled, detached and hidden candidates.

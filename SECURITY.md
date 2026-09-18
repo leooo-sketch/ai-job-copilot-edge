@@ -15,11 +15,11 @@ Please do not open a public issue for vulnerabilities that could expose API keys
 - No remote code execution or remotely hosted extension JavaScript.
 - No unsafe rendering of job-site HTML in the extension UI.
 - No application without an explicit batch confirmation.
-- No form submission, file selection, overwrite of existing values, or preselection of sensitive autofill fields.
+- No form submission, file selection, overwrite of existing values, or invented/ambiguous autofill values. A deliberate **Scan and fill** click now includes confidently mapped sensitive profile values; no separate sensitive-field confirmation is shown.
 - No model-generated fill values: AI semantic review may only select a path that already exists in the local profile.
 - Work-to-internship cross-section mappings preserve the real work record and always require manual confirmation.
 - Resume files are parsed locally; only extracted text is sent after an explicit profile-generation action.
 - No CAPTCHA or access-verification bypass.
 - No API keys, resumes, or personal data in logs, tests, or repository assets.
 
-If a proposed change weakens one of these invariants, it should be discussed before implementation.
+Changes to these invariants should be explicit in the UI and release notes.

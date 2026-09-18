@@ -28,28 +28,33 @@ const PROFILE_SCALAR_FIELDS = Object.freeze({
   profileEnglishNameInput: "basics.englishName", profilePhoneCountryCodeInput: "basics.phoneCountryCode",
   profilePhoneInput: "basics.phone", profileAlternatePhoneInput: "basics.alternatePhone",
   profileEmailInput: "basics.email", profileAlternateEmailInput: "basics.alternateEmail",
-  profileWechatInput: "basics.wechat", profileUrlInput: "basics.url", profileGithubInput: "basics.github",
+  profileWechatInput: "basics.wechat", profileUrlInput: "basics.url", profilePortfolioUrlInput: "basics.portfolioUrl", profileGithubInput: "basics.github",
   profileLinkedinInput: "basics.linkedin", profileCurrentCityInput: "basics.currentCity",
   profileCurrentProvinceInput: "basics.currentProvince", profileCurrentCountryInput: "basics.currentCountry",
+  profileCurrentAddressInput: "basics.currentAddress", profileHometownInput: "basics.hometown",
   profileNativePlaceInput: "basics.nativePlace", profileAddressInput: "basics.address",
-  profilePostalCodeInput: "basics.postalCode", profileNationalityInput: "basics.nationality",
+  profilePostalCodeInput: "basics.postalCode", profileNationalityInput: "basics.nationality", profileCountryRegionInput: "basics.countryRegion",
+  profileProfessionalQualificationsInput: "basics.professionalQualifications",
   profileCitizenshipInput: "basics.citizenship", profileCurrentCompanyInput: "basics.currentCompany",
   profileCurrentTitleInput: "basics.currentTitle", profileYearsExperienceInput: "basics.yearsOfExperience",
   profileExpectedRoleInput: "jobPreferences.expectedRole", profileExpectedJobFamilyInput: "jobPreferences.expectedJobFamily",
   profileExpectedIndustryInput: "jobPreferences.expectedIndustry", profileExpectedCityInput: "jobPreferences.expectedCities",
   profileExpectedSalaryMinInput: "jobPreferences.expectedSalaryMin", profileExpectedSalaryMaxInput: "jobPreferences.expectedSalaryMax",
+  profileExpectedSalaryTextInput: "jobPreferences.expectedSalaryText",
   profileSalaryPeriodInput: "jobPreferences.salaryPeriod", profileCurrencyInput: "jobPreferences.currency",
   profileAvailableDateInput: "jobPreferences.availableDate", profileEmploymentTypeInput: "jobPreferences.employmentType",
   profileWorkModeInput: "jobPreferences.workMode", profileRelocateInput: "jobPreferences.willingToRelocate",
   profileTravelDomesticInput: "jobPreferences.travelDomestic", profileTravelInternationalInput: "jobPreferences.travelInternational",
   profileAcceptPartTimeInput: "jobPreferences.acceptPartTime", profileAcceptTemporaryInput: "jobPreferences.acceptTemporary",
   profileFlexibleWorkInput: "jobPreferences.flexibleWork", profileSourceInput: "jobPreferences.source",
+  profileApplicationMethodInput: "jobPreferences.applicationMethod",
   profileReferrerNameInput: "jobPreferences.referrerName", profileReferrerEmployeeIdInput: "jobPreferences.referrerEmployeeId",
   profileIdTypeInput: "private.idType", profileIdNumberInput: "private.idNumber",
   profileIdExpiryInput: "private.idExpiryDate", profilePassportNumberInput: "private.passportNumber",
   profilePassportExpiryInput: "private.passportExpiryDate", profileBirthDateInput: "private.birthDate",
-  profileBirthPlaceInput: "private.birthPlace", profileGenderInput: "private.gender",
+  profileBirthPlaceInput: "private.birthPlace", profileAgeInput: "private.age", profileGenderInput: "private.gender",
   profileEthnicityInput: "private.ethnicity", profileHealthStatusInput: "private.healthStatus",
+  profilePersonalityAssessmentInput: "private.personalityAssessment", profileEmergencyPhoneInput: "private.emergencyPhone",
   profileMaritalStatusInput: "private.maritalStatus", profilePoliticalStatusInput: "private.politicalStatus",
   profilePartyJoinDateInput: "private.partyJoinDate", profileHukouLocationInput: "private.hukouLocation",
   profileHukouTypeInput: "private.hukouType", profileHeightInput: "private.heightCm",
@@ -57,9 +62,12 @@ const PROFILE_SCALAR_FIELDS = Object.freeze({
   profileVeteranInput: "private.veteranStatus", profileWorkAuthorizationInput: "eligibility.workAuthorization",
   profileVisaTypeInput: "eligibility.visaType", profileRequiresSponsorshipInput: "eligibility.requiresSponsorship",
   profileNonCompeteInput: "eligibility.nonCompete", profileRelativeAtCompanyInput: "eligibility.relativeAtCompany",
+  profileFriendOrRelativeAtCompanyInput: "eligibility.friendOrRelativeAtCompany",
   profileRelativeDetailsInput: "eligibility.relativeDetails", profileDisciplinaryHistoryInput: "eligibility.disciplinaryHistory",
   profileCriminalHistoryInput: "eligibility.criminalHistory", profileConflictOfInterestInput: "eligibility.conflictOfInterest",
-  profileBackgroundCheckInput: "eligibility.canBackgroundCheck", profileSelfEvaluationInput: "narratives.selfEvaluation",
+  profileBackgroundCheckInput: "eligibility.canBackgroundCheck",
+  profilePlansPostgraduateExamInput: "eligibility.plansPostgraduateExam", profileHasAcademicAdvisorInput: "eligibility.hasAcademicAdvisor",
+  profileSelfEvaluationInput: "narratives.selfEvaluation",
   profileStrengthsInput: "narratives.strengths", profileHobbiesInput: "narratives.hobbies",
   profileCareerPlanInput: "narratives.careerPlan", profileWhyCompanyInput: "narratives.whyCompany",
   profileWhyRoleInput: "narratives.whyRole", profileCoverLetterInput: "narratives.coverLetter",
@@ -90,7 +98,7 @@ const PROFILE_STRUCTURED_EDITORS = Object.freeze({
       ["majorCategory", "专业类别/学科门类"], ["minor", "辅修专业"], ["researchDirection", "研究方向"],
       ["studyType", "学位"], ["degreeType", "学位类型"], ["educationLevel", "学历"],
       ["startDate", "入学时间", "text", "YYYY-MM"], ["endDate", "毕业时间", "text", "YYYY-MM"], ["graduationDate", "毕业日期", "text", "YYYY-MM-DD"],
-      ["score", "GPA/平均成绩"], ["scoreScale", "GPA满分"], ["rank", "专业/年级排名"], ["rankTotal", "排名总人数"],
+      ["score", "平均绩点或成绩"], ["scoreScale", "满分绩点或成绩"], ["rank", "专业/年级排名"], ["rankTotal", "排名总人数"],
       ["educationType", "受教育类型/学习形式"], ["trainingMode", "培养方式", "text", "定向 / 非定向（以实际情况为准）"], ["unifiedAdmission", "是否统招", "text", "是 / 否"], ["studentType", "学生类型"], ["admissionBatch", "录取批次"],
       ["overseasStudy", "是否有海外学习经历", "text", "是 / 否"], ["status", "在读/毕业状态"],
       ["country", "国家/地区"], ["city", "学校所在地"], ["courses", "主修课程", "textarea"], ["thesis", "论文题目"],
@@ -127,6 +135,7 @@ function experienceEditorFields(kindLabel) {
     ["jobFunction", "岗位职能"], ["industry", "公司行业"], ["companyNature", "公司性质"], ["companySize", "公司规模"],
     ["startDate", "开始时间", "text", "YYYY-MM"], ["endDate", "结束时间", "text", "YYYY-MM"], ["current", `是否仍在${isInternship ? "实习" : "职"}`, "text", "是 / 否"],
     ["country", "国家/地区"], ["city", `${kindLabel}城市`], ["location", "详细地点"], ["teamSize", "团队规模"], ["directReports", "管理/下属人数"],
+    ["reportingTo", "职位汇报（给谁）"], ["referenceName", "证明人姓名"], ["referenceContact", "证明人联系方式"],
     ["responsibilities", `${kindLabel}职责/内容`, "textarea"], ["achievements", `${kindLabel}成果/业绩`, "textarea"], ["technologies", "技能/工具/技术栈", "textarea"],
     ["leavingReason", `${isInternship ? "结束" : "离职"}原因`], ["supervisorName", "直属上级/导师"], ["supervisorTitle", "上级职位"],
     ["supervisorPhone", "上级联系电话"], ["salary", `${kindLabel}薪资`], ["salaryPeriod", "薪资周期"], ["summary", `${kindLabel}经历概述`, "textarea"]
@@ -146,6 +155,8 @@ const state = {
   applying: false,
   autofillScanning: false,
   autofillFilling: false,
+  autofillOneClick: false,
+  autofillPageUrl: "",
   autofillFields: [],
   autofillPlan: [],
   fieldMappings: {}
@@ -207,6 +218,7 @@ function bindEvents() {
   ui.reviewList.addEventListener("change", handleReviewChange);
   ui.editProfileButton.addEventListener("click", openProfileDialog);
   ui.scanFormButton.addEventListener("click", scanApplicationForm);
+  ui.scanAndFillButton.addEventListener("click", scanAndFillApplicationForm);
   ui.selectReadyFieldsButton.addEventListener("click", selectReadyAutofillFields);
   ui.clearFieldSelectionButton.addEventListener("click", clearAutofillSelection);
   ui.autofillPlanList.addEventListener("change", handleAutofillPlanChange);
@@ -244,6 +256,7 @@ async function detectActiveSite() {
       ? granted ? "已获得当前网站权限，可扫描可见表单字段" : "扫描时只申请当前网站权限，不会持续读取其他网站"
       : "请打开以 http:// 或 https:// 开头的企业网申页面";
     ui.scanFormButton.disabled = !supported || state.autofillScanning || state.autofillFilling;
+    ui.scanAndFillButton.disabled = !supported || state.autofillScanning || state.autofillFilling || state.autofillOneClick;
     return;
   }
 
@@ -298,9 +311,10 @@ function identifySite(urlValue) {
 async function scanApplicationForm() {
   if (!state.activeTab?.id || !isAutofillPage(state.activeTab.url || "")) {
     showToast("请先打开企业网申表单页面");
-    return;
+    return false;
   }
   state.autofillScanning = true;
+  state.autofillPageUrl = "";
   setButtonBusy(ui.scanFormButton, true, "正在扫描…");
   try {
     const origin = permissionPattern(state.activeTab.url);
@@ -330,6 +344,7 @@ async function scanApplicationForm() {
     setButtonBusy(ui.scanFormButton, true, "正在扫描…");
     const response = await chrome.tabs.sendMessage(state.activeTab.id, { type: "AUTOFILL_SCAN_FORM" });
     if (!response?.ok) throw new Error(response?.error || "页面没有返回表单字段");
+    state.autofillPageUrl = response.pageUrl || state.activeTab.url;
     state.autofillFields = Array.isArray(response.fields) ? response.fields : [];
     state.autofillPlan = JobAutofillCore.buildFillPlan(state.profile, state.autofillFields);
     if (state.autofillFields.length && state.profile.automationPolicy.useAIReasoning && state.config.apiKey) {
@@ -364,13 +379,31 @@ async function scanApplicationForm() {
       showToast(`已识别 ${state.autofillFields.length} 个字段，其中 ${ready} 个可直接填`);
     }
     await detectActiveSite();
+    return state.autofillFields.length > 0;
   } catch (error) {
     appendLog("error", "网申表单扫描失败", cleanError(error));
     showToast(autofillErrorMessage(error));
+    return false;
   } finally {
     state.autofillScanning = false;
-    setButtonBusy(ui.scanFormButton, false, "扫描当前表单");
+    setButtonBusy(ui.scanFormButton, false, "仅扫描预览");
     ui.scanFormButton.disabled = !isAutofillPage(state.activeTab?.url || "");
+    ui.scanAndFillButton.disabled = !isAutofillPage(state.activeTab?.url || "") || state.autofillOneClick;
+  }
+}
+
+async function scanAndFillApplicationForm() {
+  if (state.autofillScanning || state.autofillFilling) return;
+  const tabId = state.activeTab?.id;
+  state.autofillOneClick = true;
+  setButtonBusy(ui.scanAndFillButton, true, "正在扫描并填写…");
+  try {
+    if (!await scanApplicationForm() || tabId !== state.activeTab?.id) return;
+    await fillSelectedAutofillFields();
+  } finally {
+    state.autofillOneClick = false;
+    setButtonBusy(ui.scanAndFillButton, false, "一键扫描并填写");
+    ui.scanAndFillButton.disabled = !isAutofillPage(state.activeTab?.url || "");
   }
 }
 
@@ -452,7 +485,7 @@ function renderAutofill() {
 function autofillStatusBadge(item) {
   const labels = {
     ready: "可直接填",
-    review: item.sensitive ? "敏感·待确认" : item.crossCategory ? "跨栏目·待确认" : "待确认",
+    review: item.crossCategory ? "跨栏目·待确认" : "映射待核对",
     existing: "已有内容",
     missing: "资料缺失",
     unmapped: "未可靠识别",
@@ -570,13 +603,15 @@ async function fillSelectedAutofillFields() {
   if (state.autofillFilling || !state.activeTab?.id) return;
   const selected = state.autofillPlan.filter((item) => item.selected && ["ready", "review"].includes(item.status));
   if (!selected.length) return;
-  const sensitiveCount = selected.filter((item) => item.sensitive).length;
-  if (sensitiveCount && !confirm(`所选内容包含 ${sensitiveCount} 个敏感字段。确认仅在当前网申页面填写这些值吗？扩展不会提交表单。`)) return;
 
   state.autofillFilling = true;
+  ui.scanFormButton.disabled = true;
+  ui.scanAndFillButton.disabled = true;
   setButtonBusy(ui.fillSelectedFieldsButton, true, "正在填写…");
   renderAutofill();
   try {
+    const currentTab = await chrome.tabs.get(state.activeTab.id);
+    if (!state.autofillPageUrl || currentTab.url !== state.autofillPageUrl) throw new Error("页面已变化，请重新扫描后填写");
     if (!await hasAutofillPermission(state.activeTab.url)) throw new Error("当前网站权限已失效，请重新扫描表单");
     await injectAutofillAgent(state.activeTab.id);
     const response = await chrome.tabs.sendMessage(state.activeTab.id, {
@@ -601,7 +636,9 @@ async function fillSelectedAutofillFields() {
     showToast(autofillErrorMessage(error));
   } finally {
     state.autofillFilling = false;
-    setButtonBusy(ui.fillSelectedFieldsButton, false, "填写所选字段");
+    setButtonBusy(ui.fillSelectedFieldsButton, false, "填写已识别字段");
+    ui.scanFormButton.disabled = !isAutofillPage(state.activeTab?.url || "");
+    ui.scanAndFillButton.disabled = !isAutofillPage(state.activeTab?.url || "") || state.autofillOneClick;
     renderAutofill();
   }
 }

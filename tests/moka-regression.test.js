@@ -67,13 +67,13 @@ test('React Select inner search input respects an already selected visible value
   } finally { h.dom.window.close(); }
 });
 
-test('manual mappings stay local and sensitive/work fallbacks remain review-only', () => {
+test('manual mappings stay local, sensitive values are ready, and work fallbacks remain review-only', () => {
   const profile = { basics: { name: '测试用户' }, private: { gender: '男' }, work: [{ name: '甲', summary: '既有经历概述' }] };
   const field = { fieldId: 'x', label: '称呼', section: '个人信息' };
   const item = core.buildFillPlan(profile, [field])[0];
   assert.equal(core.mapFromProfile(profile, item, field, 'basics.name').value, '测试用户');
   assert.equal(core.mapFromProfile(profile, item, field, 'invented.path'), item);
-  assert.equal(core.mapFromProfile(profile, item, field, 'private.gender', true).selected, false);
+  assert.equal(core.mapFromProfile(profile, item, field, 'private.gender', true).selected, true);
   assert.notEqual(core.fieldMemoryKey('https://a.test/apply', field), core.fieldMemoryKey('https://b.test/apply', field));
   assert.equal(core.fieldMemoryKey('https://a.test/apply', {...field, repeatKind: 'work'}), '');
   const duty = core.buildFillPlan(profile, [{ fieldId: 'duty', label: '工作职责', section: '工作经历', repeatKind: 'work', repeatIndex: 0 }])[0];
@@ -182,6 +182,101 @@ test('custom selects use visible option labels, do not click unrelated menus, an
     assert.equal(h.doc.querySelector('#month .select-value').textContent, '9月');
     assert.equal(unrelatedClicks, 0);
   } finally { h.dom.window.close(); }
+});
+
+test('searchable generic listbox options fill ethnicity and study mode without selecting another menu', async () => {
+  const h = harness(`<label>民族<div class="recruit-select" id="ethnicity" tabindex="0" aria-haspopup="listbox" aria-controls="ethnicity-menu"><span class="select-value">请选择</span></div></label>
+    <div id="ethnicity-menu" role="listbox" hidden><input placeholder="搜索"><div>汉族</div><div>土家族</div></div>
+    <label>最高学历学习形式<div class="recruit-select" id="study" tabindex="0" aria-haspopup="listbox" aria-controls="study-menu"><span class="select-value">请选择</span></div></label>
+    <ul id="study-menu" role="listbox" hidden><li>全日制</li><li>非全日制</li></ul>
+    <ul role="listbox"><li id="unrelated-option">汉族</li></ul>`);
+  try {
+    h.doc.getElementById('ethnicity').onclick = () => { h.doc.getElementById('ethnicity-menu').hidden = false; };
+    h.doc.getElementById('study').onclick = () => { h.doc.getElementById('study-menu').hidden = false; };
+    let unrelatedClicks = 0;
+    h.doc.getElementById('unrelated-option').onclick = () => { unrelatedClicks++; };
+    for (const id of ['ethnicity-menu', 'study-menu']) {
+      h.doc.querySelectorAll(`#${id} > div, #${id} > li`).forEach((option) => {
+        option.onclick = () => {
+          const wrapper = h.doc.getElementById(id === 'ethnicity-menu' ? 'ethnicity' : 'study');
+          wrapper.querySelector('.select-value').textContent = option.textContent;
+          h.doc.getElementById(id).hidden = true;
+        };
+      });
+    }
+    const { fields } = await h.message({ type: 'AUTOFILL_SCAN_FORM' });
+    assert.equal(fields.length, 2, JSON.stringify(fields));
+    const profile = { private: { ethnicity: '汉族' }, education: [{ educationType: '全日制', educationLevel: '硕士' }] };
+    const plan = core.buildFillPlan(profile, fields);
+    assert.equal(plan[0].status, 'ready');
+    assert.equal(plan[1].status, 'ready');
+    const { result } = await h.message({ type: 'AUTOFILL_APPLY_PLAN', entries: plan.filter((item) => item.selected) });
+    assert.equal(result.filled, 2, JSON.stringify(result));
+    assert.equal(h.doc.querySelector('#ethnicity .select-value').textContent, '汉族');
+    assert.equal(h.doc.querySelector('#study .select-value').textContent, '全日制');
+    assert.equal(unrelatedClicks, 0);
+  } finally { h.dom.window.close(); }
+});
+
+test('popup search filters async choices before selecting a unique saved city', async () => {
+  const h = harness(`<label>现居住地<div class="recruit-select" id="city" tabindex="0" aria-controls="city-menu"><span class="select-value">请选择</span></div></label>
+    <div id="city-menu" role="listbox" hidden><input placeholder="搜索城市"><div id="initial-option">北京</div></div>`);
+  try {
+    h.doc.getElementById('city').onclick = () => { h.doc.getElementById('city-menu').hidden = false; };
+    h.doc.querySelector('#city-menu input').addEventListener('input', () => setTimeout(() => {
+      const city = h.doc.createElement('div');
+      city.textContent = '厦门';
+      city.onclick = () => {
+        h.doc.querySelector('#city .select-value').textContent = city.textContent;
+        h.doc.getElementById('city-menu').hidden = true;
+      };
+      h.doc.getElementById('city-menu').append(city);
+    }, 80));
+    const { fields } = await h.message({ type: 'AUTOFILL_SCAN_FORM' });
+    const plan = core.buildFillPlan({ basics: { currentCity: '厦门' } }, fields);
+    assert.equal(plan[0].status, 'ready', JSON.stringify(plan));
+    const { result } = await h.message({ type: 'AUTOFILL_APPLY_PLAN', entries: [{ fieldId: fields[0].fieldId, value: plan[0].value }] });
+    assert.equal(result.filled, 1, JSON.stringify(result));
+    assert.equal(h.doc.querySelector('#city .select-value').textContent, '厦门');
+  } finally { h.dom.window.close(); }
+});
+
+test('readonly select input with arrow and portal listbox retains the chosen value', async () => {
+  const h = harness(`<label>民族<div id="ethnic-control"><input id="ethnic-input" readonly placeholder="请选择"><svg></svg><span class="select-value"></span></div></label>
+    <div id="ethnic-popup" role="listbox" hidden><div>汉族</div><div>土家族</div></div>`);
+  try {
+    h.doc.getElementById('ethnic-input').onclick = () => { h.doc.getElementById('ethnic-popup').hidden = false; };
+    h.doc.querySelectorAll('#ethnic-popup > div').forEach((option) => {
+      option.onclick = () => {
+        h.doc.querySelector('#ethnic-control .select-value').textContent = option.textContent;
+        h.doc.getElementById('ethnic-popup').hidden = true;
+      };
+    });
+    const { fields } = await h.message({ type: 'AUTOFILL_SCAN_FORM' });
+    assert.equal(fields.length, 1, JSON.stringify(fields));
+    assert.equal(fields[0].customSelect, true);
+    const { result } = await h.message({ type: 'AUTOFILL_APPLY_PLAN', entries: [{ fieldId: fields[0].fieldId, value: '汉族' }] });
+    assert.equal(result.filled, 1, JSON.stringify(result));
+  } finally { h.dom.window.close(); }
+});
+
+test('screenshot location labels map only to existing profile fields', () => {
+  const fields = [
+    { fieldId: 'city', label: '现居住地', section: '个人信息' },
+    { fieldId: 'school-city', label: '最高学历院校地点', section: '个人信息' },
+    { fieldId: 'unknown', label: '最高学历院校地点', section: '个人信息' }
+  ];
+  const plan = core.buildFillPlan({ basics: { currentCity: '厦门' }, education: [{ institution: '甲校', city: '北京', educationLevel: '本科' }, { institution: '乙校', city: '上海', educationLevel: '硕士' }] }, fields);
+  assert.equal(plan[0].value, '厦门');
+  assert.equal(plan[1].value, '上海');
+  assert.equal(plan[1].canonicalKey, 'education.1.city');
+  assert.equal(plan[2].value, '上海');
+  const missing = core.buildFillPlan({ education: [{ educationLevel: '硕士' }] }, [fields[1]])[0];
+  assert.equal(missing.status, 'missing');
+  assert.equal(missing.selected, false);
+  const study = core.buildFillPlan({ education: [{ educationLevel: '本科', educationType: '非全日制' }, { educationLevel: '硕士', educationType: '全日制' }] }, [{ fieldId: 'study', label: '学习形式', section: '个人信息' }])[0];
+  assert.equal(study.value, '全日制');
+  assert.equal(study.canonicalKey, 'education.1.educationType');
 });
 
 test('work fallback keeps employment identity and the AI cannot replace reliable or split-date mappings', () => {
